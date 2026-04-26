@@ -31,7 +31,7 @@ from scorers import ALL_SCORERS, tag_failure_modes
 # ---------------------------------------------------------------------------
 
 PROJECT = "community-health-eval"
-DATASET_NAME = "community-health-v1"
+DATASET_NAME = "pd_community_health_labeled"
 RUN_NUMBER = os.environ.get("RUN_NUMBER", "1")
 EXPERIMENT_NAME = f"mcp-baseline-run-{RUN_NUMBER}"
 MODEL = "claude-sonnet-4-20250514"
