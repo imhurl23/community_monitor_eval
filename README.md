@@ -61,6 +61,20 @@ Before defining the dataset, a shared label schema is needed. The following eigh
 
 ## Dataset Design
 
+### Browser Labeler
+
+The repo includes a browser-based annotation tool at `dataset_curation/braintrust-toxicity-labeler.html` for reviewing sampled rows locally before re-importing them into Braintrust. It is designed around the same row shape produced by the curation pipeline: each row carries the discussion metadata, the current `ground_truth` / `expected` label object, and the `_review.suspect_comments` helper payload.
+
+The labeler supports the full manual review loop in one page:
+- import JSONL or JSON exports built from the curation pipeline
+- filter rows by search text and labeling status
+- review suspect comments, copy candidate snippets, and assign toxicity / severity / labels
+- save edits locally in-browser, then export updated JSONL or patch JSON for upload
+
+It is especially useful for the toxic and borderline strata because the UI surfaces the top-ranked suspect comments, lets the annotator paste a problematic snippet directly from those comments, and keeps the gold response alongside the labeling controls.
+
+![Braintrust Toxicity Labeler](dataset_curation/braintrust-toxicity-labeler.png)
+
 ### Source Repositories
 
 Using active, mid-size OSS repositories with a documented history of heated discussions. Candidate properties:
