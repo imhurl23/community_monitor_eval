@@ -8,6 +8,7 @@
   <style>
     body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     .chip-active { box-shadow: inset 0 0 0 2px rgba(220,38,38,.35); }
+    .snippet-body { max-height: 18rem; overflow: auto; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen">
@@ -17,7 +18,11 @@
         <h1 class="text-2xl font-bold">Braintrust Toxicity Labeler</h1>
         <p class="text-sm text-slate-600 mt-1">Load dataset rows from JSONL, label them locally, and export updated rows for re-import or API upload.</p>
       </div>
+      <div class="text-xs text-slate-500 bg-white border border-slate-200 rounded-lg px-3 py-2 max-w-md">
+        This tool runs fully in your browser. No iframe bridge required.
+      </div>
     </div>
+
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-1 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
@@ -27,6 +32,7 @@
           <p class="text-xs text-slate-500 mt-2">Expected format: one JSON object per line, using Braintrust row fields like <code>input</code>, <code>expected</code>, and <code>metadata</code>.</p>
         </div>
 
+
         <div class="border-t border-slate-100 pt-4 space-y-2">
           <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Quick Actions</div>
           <div class="flex flex-wrap gap-2">
@@ -35,6 +41,7 @@
             <button id="exportPatchBtn" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium">Export Patches</button>
           </div>
         </div>
+
 
         <div class="border-t border-slate-100 pt-4 space-y-2">
           <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Dataset</div>
@@ -58,6 +65,7 @@
           </div>
         </div>
 
+
         <div class="border-t border-slate-100 pt-4 space-y-2">
           <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Filter</div>
           <input id="searchInput" type="text" placeholder="Search repo, URL, input text..." class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
@@ -69,11 +77,13 @@
           </select>
         </div>
 
+
         <div class="border-t border-slate-100 pt-4 space-y-2">
           <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Rows</div>
           <div id="rowList" class="max-h-[28rem] overflow-auto space-y-2 pr-1"></div>
         </div>
       </div>
+
 
       <div class="lg:col-span-2 space-y-4">
         <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
@@ -88,9 +98,11 @@
           </div>
         </div>
 
+
         <div id="emptyState" class="bg-white border border-dashed border-slate-300 rounded-2xl p-10 text-center text-slate-500 shadow-sm">
           Load a JSONL export to start labeling.
         </div>
+
 
         <div id="editor" class="hidden grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div class="space-y-4">
@@ -100,6 +112,7 @@
                   <div class="flex flex-wrap items-center gap-2 mb-1">
                     <span id="rowIdBadge" class="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded"></span>
                     <span id="typeBadge" class="hidden text-xs font-semibold px-2 py-1 rounded-full"></span>
+                    <span id="lockBadge" class="hidden text-xs font-semibold px-2 py-1 rounded-full bg-rose-100 text-rose-700"></span>
                     <span id="repoLabel" class="text-xs text-slate-500"></span>
                   </div>
                   <a id="urlLink" href="#" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 break-all hover:underline"></a>
@@ -107,17 +120,30 @@
                 <div id="saveIndicator" class="text-xs text-emerald-600"></div>
               </div>
 
+
               <div class="grid grid-cols-2 gap-3 text-sm" id="metadataGrid"></div>
             </div>
 
-            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-              <div class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Raw Input</div>
-              <pre id="rawInput" class="text-xs bg-slate-50 rounded-xl p-3 overflow-auto max-h-[28rem] whitespace-pre-wrap break-words"></pre>
+
+            <div id="suspectPanel" class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <div class="flex items-center justify-between mb-3">
+                <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Suspect Comments</div>
+                <div id="suspectCount" class="text-xs text-slate-400"></div>
+              </div>
+              <div id="suspectList" class="space-y-3"></div>
             </div>
+
+
+            <details class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <summary class="text-xs uppercase tracking-wide font-semibold text-slate-500 cursor-pointer">Raw Input (JSON)</summary>
+              <pre id="rawInput" class="mt-3 text-xs bg-slate-50 rounded-xl p-3 overflow-auto max-h-[28rem] whitespace-pre-wrap break-words"></pre>
+            </details>
           </div>
+
 
           <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-5">
             <div class="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-3">Label this Row</div>
+
 
             <div>
               <div class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Is Toxic?</div>
@@ -134,27 +160,35 @@
               </div>
             </div>
 
+
             <div id="toxicDetails" class="hidden space-y-5">
               <div>
                 <div class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Severity</div>
                 <div id="severityOptions" class="flex flex-wrap gap-2"></div>
               </div>
 
+
               <div>
                 <div class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Toxicity Labels</div>
                 <div id="labelOptions" class="flex flex-col gap-2"></div>
               </div>
 
+
               <div>
-                <div class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Problematic Snippet</div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-xs uppercase tracking-wide font-semibold text-slate-500">Problematic Snippet</div>
+                  <div class="text-xs text-slate-400">Use the "→ Snippet" buttons in the Suspect Comments panel to fill this in.</div>
+                </div>
                 <textarea id="problematicSnippet" rows="4" class="w-full text-sm border border-slate-200 rounded-lg p-3 bg-rose-50 text-rose-900 placeholder-rose-300 resize-y" placeholder="Paste the problematic text here..."></textarea>
               </div>
             </div>
+
 
             <div>
               <div class="text-xs uppercase tracking-wide font-semibold text-slate-500 mb-2">Gold Response</div>
               <textarea id="goldResponse" rows="4" class="w-full text-sm border border-slate-200 rounded-lg p-3 bg-emerald-50 text-emerald-900 placeholder-emerald-300 resize-y" placeholder="Enter the ideal moderator response..."></textarea>
             </div>
+
 
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-4">
               <div class="text-xs text-slate-400">Changes save locally in memory. Export when done.</div>
@@ -165,6 +199,7 @@
       </div>
     </div>
   </div>
+
 
   <script>
     const severityOptions = ["none", "low", "medium", "high", "critical"];
@@ -179,11 +214,13 @@
       { value: "object_directed", label: "Object-Directed", description: "Hostility directed at code/project artifacts" },
     ];
 
+
     const state = {
       rows: [],
       filteredIndexes: [],
       selectedFilteredPos: 0,
     };
+
 
     const el = {
       fileInput: document.getElementById('fileInput'),
@@ -206,11 +243,15 @@
       editor: document.getElementById('editor'),
       rowIdBadge: document.getElementById('rowIdBadge'),
       typeBadge: document.getElementById('typeBadge'),
+      lockBadge: document.getElementById('lockBadge'),
       repoLabel: document.getElementById('repoLabel'),
       urlLink: document.getElementById('urlLink'),
       saveIndicator: document.getElementById('saveIndicator'),
       metadataGrid: document.getElementById('metadataGrid'),
       rawInput: document.getElementById('rawInput'),
+      suspectPanel: document.getElementById('suspectPanel'),
+      suspectList: document.getElementById('suspectList'),
+      suspectCount: document.getElementById('suspectCount'),
       toxicDetails: document.getElementById('toxicDetails'),
       problematicSnippet: document.getElementById('problematicSnippet'),
       goldResponse: document.getElementById('goldResponse'),
@@ -220,10 +261,12 @@
       toxicButtons: Array.from(document.querySelectorAll('.toxic-toggle')),
     };
 
+
     function safeParse(value) {
       if (typeof value !== 'string') return value;
       try { return JSON.parse(value); } catch { return value; }
     }
+
 
     function ensureExpected(row) {
       if (!row.expected || typeof row.expected !== 'object' || Array.isArray(row.expected)) row.expected = {};
@@ -234,6 +277,7 @@
       if (typeof row.expected.gold_response !== 'string') row.expected.gold_response = '';
       return row;
     }
+
 
     function normalizeRow(raw, idx) {
       const row = JSON.parse(JSON.stringify(raw));
@@ -247,21 +291,60 @@
       return row;
     }
 
+
+    /**
+     * Pull suspect comments out of wherever they may live in the row.
+     * curate_dataset.py emits them at row.input._review.suspect_comments
+     * (because the whole assembled row is uploaded as `input` to Braintrust).
+     * We also fall back to row._review and row.metadata._review for
+     * datasets that flatten the structure differently.
+     */
+    function getSuspectComments(row) {
+      const candidates = [
+        row?.input?._review?.suspect_comments,
+        row?._review?.suspect_comments,
+        row?.metadata?._review?.suspect_comments,
+        row?.input?.suspect_comments,
+      ];
+      for (const c of candidates) {
+        if (Array.isArray(c) && c.length) return c;
+      }
+      return [];
+    }
+
+
+    function getLockReason(row) {
+      return row?.input?.metadata?.active_lock_reason
+        ?? row?.metadata?.active_lock_reason
+        ?? null;
+    }
+
+
+    function getMetaForDisplay(row) {
+      // curate_dataset.py wraps everything inside `input`, but earlier
+      // notebook rows used a top-level `metadata`. Prefer the inner one.
+      return row?.input?.metadata || row?.metadata || {};
+    }
+
+
     function loadRows(rows) {
       state.rows = rows.map(normalizeRow);
       state.selectedFilteredPos = 0;
       applyFilters();
     }
 
+
     function applyFilters() {
       const q = el.searchInput.value.trim().toLowerCase();
       const status = el.statusFilter.value;
+
 
       state.filteredIndexes = state.rows
         .map((row, idx) => ({ row, idx }))
         .filter(({ row }) => {
           const haystack = JSON.stringify({ id: row.__id, input: row.input, metadata: row.metadata }).toLowerCase();
           const matchesQuery = !q || haystack.includes(q);
+
 
           const label = row.expected?.is_toxic;
           const matchesStatus =
@@ -270,24 +353,29 @@
             status === 'toxic' ? label === true :
             status === 'non_toxic' ? label === false : true;
 
+
           return matchesQuery && matchesStatus;
         })
         .map(x => x.idx);
 
+
       if (state.selectedFilteredPos >= state.filteredIndexes.length) {
         state.selectedFilteredPos = Math.max(0, state.filteredIndexes.length - 1);
       }
+
 
       renderSidebar();
       renderStats();
       renderCurrentRow();
     }
 
+
     function getCurrentRow() {
       if (!state.filteredIndexes.length) return null;
       const actualIndex = state.filteredIndexes[state.selectedFilteredPos];
       return state.rows[actualIndex] || null;
     }
+
 
     function renderStats() {
       const labeled = state.rows.filter(r => r.expected && r.expected.is_toxic !== null && r.expected.is_toxic !== undefined).length;
@@ -300,6 +388,7 @@
         : 'No matching rows.';
     }
 
+
     function rowStatusBadge(row) {
       const v = row.expected?.is_toxic;
       if (v === true) return '<span class="text-[11px] px-2 py-1 rounded-full bg-rose-100 text-rose-700 font-medium">Toxic</span>';
@@ -307,12 +396,14 @@
       return '<span class="text-[11px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">Unlabeled</span>';
     }
 
+
     function renderSidebar() {
       el.rowList.innerHTML = '';
       if (!state.filteredIndexes.length) {
         el.rowList.innerHTML = '<div class="text-sm text-slate-500 bg-slate-50 rounded-xl p-3">No matching rows.</div>';
         return;
       }
+
 
       state.filteredIndexes.forEach((actualIndex, pos) => {
         const row = state.rows[actualIndex];
@@ -337,27 +428,129 @@
       });
     }
 
+
     function renderMetadataGrid(meta) {
       el.metadataGrid.innerHTML = '';
       const items = [];
       if (meta?.comment_count != null) items.push(['Comments', meta.comment_count]);
+      if (meta?.unique_commenter_count != null) items.push(['Unique Commenters', meta.unique_commenter_count]);
       if (meta?.max_toxicity_prob != null) items.push(['Max Toxicity Prob', `${(meta.max_toxicity_prob * 100).toFixed(1)}%`]);
       if (meta?.mean_toxicity_prob != null) items.push(['Mean Toxicity Prob', `${(meta.mean_toxicity_prob * 100).toFixed(1)}%`]);
       if (meta?.is_newcomer_involved != null) items.push(['Newcomer Involved', meta.is_newcomer_involved ? 'Yes' : 'No']);
       if (meta?.first_toxic_comment_index != null) items.push(['First Toxic Comment Index', meta.first_toxic_comment_index]);
+      if (meta?.stratum) items.push(['Stratum', meta.stratum]);
+      if (meta?.classifier_stratum && meta.classifier_stratum !== meta.stratum) {
+        items.push(['Classifier Stratum', meta.classifier_stratum]);
+      }
+
 
       if (!items.length) {
         el.metadataGrid.innerHTML = '<div class="col-span-2 text-sm text-slate-500 bg-slate-50 rounded-xl p-3">No structured metadata detected.</div>';
         return;
       }
 
+
       items.forEach(([label, value]) => {
         const div = document.createElement('div');
         div.className = 'bg-slate-50 rounded-xl p-3';
-        div.innerHTML = `<div class="text-xs text-slate-400">${escapeHtml(String(label))}</div><div class="font-semibold">${escapeHtml(String(value))}</div>`;
+        div.innerHTML = `<div class="text-xs text-slate-400">${escapeHtml(String(label))}</div><div class="font-semibold text-sm">${escapeHtml(String(value))}</div>`;
         el.metadataGrid.appendChild(div);
       });
     }
+
+
+    function probColor(p) {
+      // Continuous red-shift based on probability.
+      if (p >= 0.7) return { border: 'border-rose-400', bg: 'bg-rose-50', text: 'text-rose-700', pill: 'bg-rose-200 text-rose-800' };
+      if (p >= 0.4) return { border: 'border-amber-400', bg: 'bg-amber-50', text: 'text-amber-700', pill: 'bg-amber-200 text-amber-800' };
+      return { border: 'border-slate-200', bg: 'bg-slate-50', text: 'text-slate-700', pill: 'bg-slate-200 text-slate-700' };
+    }
+
+
+    function renderSuspectComments(row) {
+      const suspects = getSuspectComments(row);
+      // Sort defensively: highest prob first.
+      const ordered = suspects.slice().sort(
+        (a, b) => (b.toxicity_prob ?? 0) - (a.toxicity_prob ?? 0)
+      );
+      el.suspectCount.textContent = ordered.length
+        ? `${ordered.length} flagged (sorted by probability)`
+        : 'none';
+      el.suspectList.innerHTML = '';
+
+
+      if (!ordered.length) {
+        el.suspectList.innerHTML = `
+          <div class="text-sm text-slate-500 bg-slate-50 rounded-xl p-3">
+            No <code>_review.suspect_comments</code> found in this row. The
+            curation script attaches the top-K highest-probability comments
+            here to speed annotation. Re-run <code>curate_dataset.py</code>
+            if you want this view populated.
+          </div>`;
+        return;
+      }
+
+
+      ordered.forEach((s, i) => {
+        const prob = s.toxicity_prob ?? 0;
+        const c = probColor(prob);
+        const author = s.author_login || 'unknown';
+        const assoc = s.author_association || '';
+        const created = s.comment_created_at ? new Date(s.comment_created_at).toLocaleString() : '';
+        const body = s.body_preview || s.body || '';
+        const probLabel = `${(prob * 100).toFixed(1)}%`;
+
+
+        const card = document.createElement('div');
+        card.className = `border-2 rounded-xl ${c.border} ${c.bg}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-2 px-3 py-2 border-b ${c.border}">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-xs font-bold ${c.pill} px-2 py-0.5 rounded-full whitespace-nowrap">#${i + 1} · ${probLabel}</span>
+              <span class="text-xs font-mono text-slate-700 truncate">${escapeHtml(author)}</span>
+              ${assoc ? `<span class="text-[10px] uppercase tracking-wide text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded">${escapeHtml(assoc)}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-1">
+              <button data-suspect-idx="${i}" data-action="snippet"
+                      class="text-xs px-2 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium whitespace-nowrap">
+                → Snippet
+              </button>
+              <button data-suspect-idx="${i}" data-action="copy"
+                      class="text-xs px-2 py-1 rounded bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium">
+                Copy
+              </button>
+            </div>
+          </div>
+          <div class="px-3 py-2 text-xs text-slate-500 flex items-center justify-between gap-2">
+            <span>${escapeHtml(created)}</span>
+            ${s.comment_id != null ? `<span class="font-mono">id: ${escapeHtml(String(s.comment_id))}</span>` : ''}
+          </div>
+          <pre class="snippet-body px-3 pb-3 text-sm whitespace-pre-wrap break-words ${c.text}">${escapeHtml(body)}</pre>
+        `;
+        el.suspectList.appendChild(card);
+      });
+
+
+      // Wire up the action buttons after the DOM is in place.
+      el.suspectList.querySelectorAll('button[data-suspect-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.suspectIdx, 10);
+          const s = ordered[idx];
+          const text = s.body_preview || s.body || '';
+          if (btn.dataset.action === 'snippet') {
+            // Auto-flip to toxic if still unlabeled, then drop the text in.
+            updateCurrentExpected(exp => {
+              if (exp.is_toxic !== true) exp.is_toxic = true;
+              exp.problematic_snippet = text;
+            });
+            el.problematicSnippet.focus();
+          } else if (btn.dataset.action === 'copy') {
+            copyText(text);
+          }
+        });
+      });
+    }
+
 
     function renderCurrentRow() {
       const row = getCurrentRow();
@@ -367,18 +560,22 @@
         return;
       }
 
+
       el.emptyState.classList.add('hidden');
       el.editor.classList.remove('hidden');
 
+
       const input = row.input || {};
-      const metadata = row.metadata || {};
+      const metadata = getMetaForDisplay(row);
       const expected = row.expected || {};
+
 
       el.rowIdBadge.textContent = row.__id;
       el.repoLabel.textContent = input.repo || metadata.repo || '';
-      if (input.url) {
-        el.urlLink.href = input.url;
-        el.urlLink.textContent = input.url;
+      const url = input.url || metadata.url;
+      if (url) {
+        el.urlLink.href = url;
+        el.urlLink.textContent = url;
         el.urlLink.classList.remove('hidden');
       } else {
         el.urlLink.href = '#';
@@ -386,17 +583,30 @@
         el.urlLink.classList.add('hidden');
       }
 
-      if (input.discussion_type) {
+
+      const dtype = input.discussion_type || metadata.discussion_type;
+      if (dtype) {
         el.typeBadge.classList.remove('hidden');
-        el.typeBadge.textContent = input.discussion_type === 'pull_request' ? 'Pull Request' : 'Issue';
-        el.typeBadge.className = `text-xs font-semibold px-2 py-1 rounded-full ${input.discussion_type === 'pull_request' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`;
+        el.typeBadge.textContent = dtype === 'pull_request' ? 'Pull Request' : 'Issue';
+        el.typeBadge.className = `text-xs font-semibold px-2 py-1 rounded-full ${dtype === 'pull_request' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`;
       } else {
         el.typeBadge.classList.add('hidden');
       }
 
+
+      const lockReason = getLockReason(row);
+      if (lockReason) {
+        el.lockBadge.classList.remove('hidden');
+        el.lockBadge.textContent = `🔒 ${lockReason}`;
+      } else {
+        el.lockBadge.classList.add('hidden');
+      }
+
+
       el.saveIndicator.textContent = row.__dirty ? 'Unsaved local changes' : 'Saved locally';
       el.rawInput.textContent = JSON.stringify(input, null, 2);
       renderMetadataGrid(metadata);
+      renderSuspectComments(row);
       renderToxicSelection(expected.is_toxic);
       renderSeverity(expected.severity);
       renderLabelOptions(expected.toxicity_labels || []);
@@ -404,6 +614,7 @@
       el.goldResponse.value = expected.gold_response || '';
       el.toxicDetails.classList.toggle('hidden', expected.is_toxic !== true);
     }
+
 
     function renderToxicSelection(value) {
       el.toxicButtons.forEach(btn => {
@@ -415,6 +626,7 @@
         btn.querySelector('span').className = `w-3 h-3 rounded-full ${selected ? (v === 'true' ? 'bg-rose-500' : v === 'false' ? 'bg-emerald-500' : 'bg-amber-400') : 'bg-slate-200'}`;
       });
     }
+
 
     function renderSeverity(selected) {
       el.severityOptions.innerHTML = '';
@@ -431,6 +643,7 @@
       });
     }
 
+
     function activeSeverity(color) {
       return color === 'red' ? 'border-red-500 bg-red-50 text-red-700' :
         color === 'orange' ? 'border-orange-400 bg-orange-50 text-orange-700' :
@@ -438,6 +651,7 @@
         color === 'blue' ? 'border-blue-400 bg-blue-50 text-blue-700' :
         'border-slate-400 bg-slate-100 text-slate-700';
     }
+
 
     function renderLabelOptions(selectedValues) {
       el.labelOptions.innerHTML = '';
@@ -464,6 +678,7 @@
       });
     }
 
+
     function updateCurrentExpected(mutator) {
       const row = getCurrentRow();
       if (!row) return;
@@ -475,6 +690,7 @@
       renderCurrentRow();
     }
 
+
     function saveCurrentLocally() {
       const row = getCurrentRow();
       if (!row) return;
@@ -482,6 +698,7 @@
       el.saveIndicator.textContent = 'Saved locally';
       renderSidebar();
     }
+
 
     function exportJSONL() {
       const text = state.rows.map(row => {
@@ -494,6 +711,7 @@
       downloadText('braintrust-labeled.jsonl', text);
     }
 
+
     function exportPatches() {
       const patches = state.rows.map(row => ({
         id: row.id || row.__id,
@@ -501,6 +719,7 @@
       }));
       downloadText('braintrust-label-patches.json', JSON.stringify(patches, null, 2));
     }
+
 
     function downloadText(filename, text) {
       const blob = new Blob([text], { type: 'application/json' });
@@ -512,6 +731,7 @@
       URL.revokeObjectURL(url);
     }
 
+
     async function copyText(text) {
       try {
         await navigator.clipboard.writeText(text);
@@ -519,6 +739,7 @@
         alert('Clipboard copy failed.');
       }
     }
+
 
     function escapeHtml(str) {
       return String(str)
@@ -529,57 +750,92 @@
         .replaceAll("'", '&#039;');
     }
 
+
     function sampleRows() {
       return [
         {
           id: 'sample-1',
           input: {
+            id: 'sample-issue-123',
             discussion_type: 'issue',
             repo: 'example/repo',
-            url: 'https://github.com/example/repo/issues/123',
-            text: 'Why has this still not been fixed? This is embarrassing.'
+            url: 'https://example.com/repo/issues/123',
+            metadata: {
+              comment_count: 9,
+              unique_commenter_count: 5,
+              max_toxicity_prob: 0.91,
+              mean_toxicity_prob: 0.29,
+              is_newcomer_involved: true,
+              first_toxic_comment_index: 4,
+              stratum: 'clearly_toxic_candidate',
+              classifier_stratum: 'borderline_candidate',
+              active_lock_reason: 'too heated'
+            },
+            _review: {
+              suspect_comments: [
+                {
+                  comment_id: 4001,
+                  author_login: 'frustrated_user',
+                  author_association: 'NONE',
+                  comment_created_at: '2024-09-12T14:33:00Z',
+                  toxicity_prob: 0.91,
+                  body_preview: "Why has this still not been fixed? This is embarrassing. Maintainers clearly don't care about end users."
+                },
+                {
+                  comment_id: 4002,
+                  author_login: 'another_dev',
+                  author_association: 'CONTRIBUTOR',
+                  comment_created_at: '2024-09-12T15:02:00Z',
+                  toxicity_prob: 0.52,
+                  body_preview: "I get the frustration but maybe tone it down a bit, the maintainers are volunteers."
+                },
+                {
+                  comment_id: 4003,
+                  author_login: 'frustrated_user',
+                  author_association: 'NONE',
+                  comment_created_at: '2024-09-12T16:21:00Z',
+                  toxicity_prob: 0.38,
+                  body_preview: "Whatever, I'll just fork it then. Don't bother responding."
+                }
+              ]
+            }
           },
           expected: {
-            is_toxic: true,
-            severity: 'medium',
-            toxicity_labels: ['entitlement', 'dismissive_tone'],
-            problematic_snippet: 'Why has this still not been fixed? This is embarrassing.',
-            gold_response: 'Please keep feedback focused on the issue itself. If you can share reproduction steps or logs, that will help maintainers investigate.'
-          },
-          metadata: {
-            comment_count: 9,
-            max_toxicity_prob: 0.74,
-            mean_toxicity_prob: 0.29,
-            is_newcomer_involved: true,
-            first_toxic_comment_index: 4,
-            repo: 'example/repo'
+            is_toxic: null,
+            severity: null,
+            toxicity_labels: [],
+            problematic_snippet: '',
+            gold_response: ''
           }
         },
         {
           id: 'sample-2',
           input: {
+            id: 'sample-pr-456',
             discussion_type: 'pull_request',
             repo: 'example/repo',
-            url: 'https://github.com/example/repo/pull/456',
-            text: 'Thanks for the contribution. I do not think this change is the right direction, but I appreciate the effort.'
+            url: 'https://example.com/repo/pull/456',
+            metadata: {
+              comment_count: 3,
+              unique_commenter_count: 2,
+              max_toxicity_prob: 0.07,
+              mean_toxicity_prob: 0.04,
+              is_newcomer_involved: false,
+              stratum: 'control_candidate'
+            },
+            _review: { suspect_comments: [] }
           },
           expected: {
-            is_toxic: false,
+            is_toxic: null,
             severity: null,
             toxicity_labels: [],
             problematic_snippet: '',
-            gold_response: 'No moderator response needed.'
-          },
-          metadata: {
-            comment_count: 3,
-            max_toxicity_prob: 0.07,
-            mean_toxicity_prob: 0.04,
-            is_newcomer_involved: false,
-            repo: 'example/repo'
+            gold_response: ''
           }
         }
       ];
     }
+
 
     el.fileInput.addEventListener('change', async (e) => {
       const file = e.target.files && e.target.files[0];
@@ -599,6 +855,7 @@
       }
     });
 
+
     el.loadSampleBtn.addEventListener('click', () => loadRows(sampleRows()));
     el.exportJsonlBtn.addEventListener('click', exportJSONL);
     el.exportPatchBtn.addEventListener('click', exportPatches);
@@ -615,6 +872,7 @@
       renderSidebar(); renderStats(); renderCurrentRow();
     });
 
+
     el.toxicButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const raw = btn.getAttribute('data-toxic');
@@ -630,6 +888,7 @@
       });
     });
 
+
     el.problematicSnippet.addEventListener('input', (e) => {
       updateCurrentExpected(exp => { exp.problematic_snippet = e.target.value; });
     });
@@ -638,11 +897,13 @@
     });
     el.saveLocalBtn.addEventListener('click', saveCurrentLocally);
 
+
     el.copyExpectedBtn.addEventListener('click', () => {
       const row = getCurrentRow();
       if (!row) return;
       copyText(JSON.stringify(row.expected, null, 2));
     });
+
 
     el.copyPatchBtn.addEventListener('click', () => {
       const row = getCurrentRow();
