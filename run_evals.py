@@ -20,6 +20,10 @@ import sys
 import time
 import urllib.request
 import urllib.error
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import anthropic
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +39,11 @@ REQUIRED_ENV_VARS = {
     "GITHUB_AGENT_TOKEN": "GitHub PAT with repo:read scope",
     "EVAL_OUTPUT_BOARD": "Sandbox repo for Community Health Reports, as owner/repo (e.g. imhurl23/eval-output-board)",
 }
+ANTHROPIC_PREFLIGHT_MODEL = os.environ.get("ANTHROPIC_PREFLIGHT_MODEL", "claude-haiku-4-5-20251001")
+
+FATAL_ANTHROPIC_ERRORS = (
+    "Your credit balance is too low to access the Anthropic API",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +79,31 @@ def check_mcp_proxy():
     return False
 
 
+def check_anthropic_access():
+    """Make a minimal Anthropic call so we fail fast on billing/auth issues."""
+    try:
+        client = anthropic.Anthropic(max_retries=0)
+        client.messages.create(
+            model=ANTHROPIC_PREFLIGHT_MODEL,
+            max_tokens=1,
+            messages=[{"role": "user", "content": "Reply with OK."}],
+        )
+        print(f"✓ Anthropic API reachable with {ANTHROPIC_PREFLIGHT_MODEL}")
+        return True
+    except anthropic.BadRequestError as exc:
+        error_message = str(exc)
+        fatal_reason = _detect_fatal_failure(error_message)
+        if fatal_reason == "anthropic credits exhausted":
+            print("ERROR: Anthropic API credits are exhausted.")
+            print("  Update billing or switch to a funded API key before running evals.")
+            return False
+        print(f"ERROR: Anthropic rejected the preflight request: {error_message}")
+        return False
+    except anthropic.APIError as exc:
+        print(f"ERROR: Anthropic preflight failed: {exc}")
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Run number management
 # ---------------------------------------------------------------------------
@@ -100,10 +134,17 @@ def _write_runfile(value: str):
 # Eval runner
 # ---------------------------------------------------------------------------
 
-def run_eval(script: str, run_number: str, label: str) -> bool:
+def _detect_fatal_failure(output: str) -> str | None:
+    for marker in FATAL_ANTHROPIC_ERRORS:
+        if marker in output:
+            return "anthropic credits exhausted"
+    return None
+
+
+def run_eval(script: str, run_number: str, label: str) -> tuple[bool, str | None]:
     """
     Runs `bt eval <script>` in a subprocess.
-    Returns True on success, False on failure.
+    Returns (passed, fatal_reason).
     """
     env = {**os.environ, "RUN_NUMBER": run_number}
     cmd = ["bt", "eval", script, "--project", "community-health-eval"]
@@ -114,12 +155,24 @@ def run_eval(script: str, run_number: str, label: str) -> bool:
     print(f"{'='*60}\n")
 
     start = time.time()
-    result = subprocess.run(cmd, cwd=EVAL_DIR, env=env)
+    result = subprocess.run(
+        cmd,
+        cwd=EVAL_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
     elapsed = time.time() - start
+
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    if result.stderr:
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
 
     status = "PASSED" if result.returncode == 0 else "FAILED"
     print(f"\n[{label}] {status} in {elapsed:.1f}s")
-    return result.returncode == 0
+    combined_output = f"{result.stdout}\n{result.stderr}"
+    return result.returncode == 0, _detect_fatal_failure(combined_output)
 
 
 # ---------------------------------------------------------------------------
@@ -140,10 +193,19 @@ def main():
         action="store_true",
         help="Skip the MCP proxy health check",
     )
+    parser.add_argument(
+        "--max-workers",
+        metavar="N",
+        type=int,
+        default=None,
+        help="Max parallel eval subprocesses (default: number of workflow × run combinations)",
+    )
     args = parser.parse_args()
 
     # Pre-flight
     check_env_vars()
+    if not check_anthropic_access():
+        sys.exit(1)
 
     run_mcp = args.only in (None, "mcp")
     run_cli = args.only in (None, "cli")
@@ -159,15 +221,40 @@ def main():
 
     print(f"\nRuns: {', '.join(run_numbers)}")
 
-    all_results = {}  # keyed by run_number
-
+    # Build flat list of (run_number, script, label) tasks so all can run concurrently
+    tasks = []
     for run_number in run_numbers:
-        run_results = {}
         if run_cli:
-            run_results["cli"] = run_eval("community_health_cli.py", run_number, "CLI")
+            tasks.append((run_number, "community_health_cli.py", "CLI"))
         if run_mcp:
-            run_results["mcp"] = run_eval("community_health_mcp.py", run_number, "MCP")
-        all_results[run_number] = run_results
+            tasks.append((run_number, "community_health_mcp.py", "MCP"))
+
+    max_workers = args.max_workers or len(tasks)
+    all_results = {rn: {} for rn in run_numbers}
+    pending_tasks = deque(tasks)
+    fatal_reason = None
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        future_to_task = {}
+
+        while pending_tasks and len(future_to_task) < max_workers:
+            rn, script, label = pending_tasks.popleft()
+            future_to_task[pool.submit(run_eval, script, rn, label)] = (rn, label)
+
+        while future_to_task:
+            future = next(as_completed(future_to_task))
+            rn, label = future_to_task.pop(future)
+            passed, task_fatal_reason = future.result()
+            all_results[rn][label.lower()] = passed
+
+            if task_fatal_reason and fatal_reason is None:
+                fatal_reason = task_fatal_reason
+                print(f"\nStopping remaining evals: detected fatal failure ({fatal_reason}).")
+                pending_tasks.clear()
+
+            if fatal_reason is None and pending_tasks:
+                next_rn, script, next_label = pending_tasks.popleft()
+                future_to_task[pool.submit(run_eval, script, next_rn, next_label)] = (next_rn, next_label)
 
     # Summary
     print(f"\n{'='*60}")
@@ -180,6 +267,9 @@ def main():
             print(f"  {icon}  run {run_number}  {workflow}")
             if not passed:
                 all_passed = False
+
+    if fatal_reason:
+        print(f"\nAborted early: {fatal_reason}.")
 
     if not all_passed:
         sys.exit(1)

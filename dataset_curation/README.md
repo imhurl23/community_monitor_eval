@@ -189,23 +189,29 @@ probability comments are attached under `_review.suspect_comments`:
 ```
 
 The `_review.*` namespace is a convention: anything under it is for the
-human annotator and is **not** part of the eval input. Strip the key
-before scoring models.
+human annotator and is **not** part of the eval input. Local dataset rows
+keep it for labeling, but Braintrust upload strips the key before insert.
 
 ### 11. Output
 
-- `community-health-v1.json` — list of dataset rows (see schema below).
+- `community_monitor_pandas.json` — list of dataset rows (see schema below).
 - Optional Braintrust upload (`--upload`) inserts each row with
-  `input=row`, `expected=row.ground_truth`, and `id=row.id`. The `id`
-  makes the upload idempotent — re-running won't create duplicates,
-  it'll update existing rows in place.
+  `input=model_input`, `expected=expected`, and `id=row.id`, where
+  `model_input` is the row with `ground_truth`, `expected`, and `_review`
+  removed. `expected` is taken from `row.expected` when present, otherwise
+  it falls back to `row.ground_truth`. The `id` makes the upload
+  idempotent — re-running won't create duplicates, it'll update existing
+  rows in place.
 
 ---
 
 ## Output schema
 
-Each row matches the existing `braintrust-labeled-N.jsonl` format so
-new pulls can be merged with prior labeled data:
+Each local row matches the labeling format used by the existing
+`braintrust-labeled-N.jsonl` workflow so new pulls can be merged with
+prior labeled data. Before Braintrust upload, the script strips
+`ground_truth` and `_review` from `input` and sends the label object as
+`expected`.
 
 ```json
 {

@@ -827,7 +827,13 @@ def upload_to_braintrust(rows: list[dict], cfg: Config) -> None:
         description=cfg.braintrust_description,
     )
     for row in rows:
-        ds.insert(input=row, expected=row.get("ground_truth"), id=row["id"])
+        model_input = {
+            key: value
+            for key, value in row.items()
+            if key not in {"ground_truth", "expected", "_review"}
+        }
+        expected = row.get("expected") or row.get("ground_truth")
+        ds.insert(input=model_input, expected=expected, id=row["id"])
     log.info("Uploaded %d rows to Braintrust %s/%s",
              len(rows), cfg.braintrust_project, cfg.braintrust_dataset)
 
@@ -848,7 +854,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "this many comments (default 3)")
     p.add_argument("--no-lock-signal", action="store_true",
                    help="Disable the locked-too-heated recall booster")
-    p.add_argument("--output", help="Output JSON path (default community-health-v1.json)")
+    p.add_argument("--output", help="Output JSON path (default community_monitor_pandas.json)")
     p.add_argument("--no-cache", action="store_true",
                    help="Ignore cached fetches and re-pull from GitHub")
     p.add_argument("--upload", action="store_true",

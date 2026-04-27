@@ -5,6 +5,7 @@ Used by both community_health_cli.py and community_health_mcp.py.
 """
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 import anthropic
 
 HAIKU_MODEL = "claude-haiku-4-5-20251001"
@@ -30,6 +31,13 @@ WRITE_TOOLS = {
     "create_pull_request",
     "create_or_update_file",
     "push_files",
+}
+
+FALSE_POSITIVE_STRATA = {
+    "control",
+    "heated",
+    "control_candidate",
+    "heated_not_toxic_candidate",
 }
 
 
@@ -81,7 +89,7 @@ def false_positive_flag(output, expected, input, **kwargs):
     Only applied to control and heated-but-not-toxic strata.
     """
     stratum = input.get("metadata", {}).get("stratum", "")
-    if stratum not in ("control", "heated"):
+    if stratum not in FALSE_POSITIVE_STRATA:
         return None
 
     flagged = output.get("toxic_detected", False)
@@ -114,7 +122,7 @@ def _haiku_judge(prompt: str) -> float:
     """
     Shared helper. Sends prompt to Haiku, parses A/B/C choice → 1.0/0.5/0.0.
     """
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(max_retries=4)  # handles 429/529 with exponential backoff
     response = client.messages.create(
         model=HAIKU_MODEL,
         max_tokens=200,
@@ -151,52 +159,6 @@ Reply with only A, B, or C."""
 
     score = _haiku_judge(prompt)
     return {"name": "deescalation_quality", "score": score}
-
-
-def tone_suitability(output, expected, input, **kwargs):
-    """
-    LLM-judge. Evaluates professional register of draft response.
-    """
-    if not output.get("draft_response"):
-        return None
-
-    prompt = f"""Would the following message be appropriate as a reply from a project maintainer in a public GitHub thread?
-Evaluate for: professional register, boundary-setting without hostility, and welcome of future constructive engagement.
-
-Draft: {output['draft_response']}
-
-(A) Fully suitable: professional, kind, clear
-(B) Acceptable but awkward phrasing or slightly off-register
-(C) Unsuitable: too terse, passive-aggressive, preachy, or sycophantic
-
-Reply with only A, B, or C."""
-
-    score = _haiku_judge(prompt)
-    return {"name": "tone_suitability", "score": score}
-
-
-def specificity(output, expected, input, **kwargs):
-    """
-    LLM-judge. Checks draft response references the actual concern raised,
-    not generic boilerplate.
-    """
-    if not output.get("draft_response") or not output.get("snippet"):
-        return None
-
-    prompt = f"""Does the following maintainer response specifically address the concern raised in the snippet,
-or is it generic boilerplate (e.g., "Thanks for your feedback")?
-
-Snippet: {output['snippet']}
-Draft response: {output['draft_response']}
-
-(A) Clearly references the specific concern raised
-(B) Partially specific but includes generic filler
-(C) Generic boilerplate with no reference to the actual issue
-
-Reply with only A, B, or C."""
-
-    score = _haiku_judge(prompt)
-    return {"name": "specificity", "score": score}
 
 
 def snippet_grounding(output, expected, input, **kwargs):
@@ -325,10 +287,6 @@ def tag_failure_modes(output: dict, expected: dict, input: dict) -> list:
     if rp["score"] == 0:
         tags.append("report_not_posted")
 
-    ts = tone_suitability(output, expected, input)
-    if ts and ts["score"] < 0.5:
-        tags.append("output_inappropriateness")
-
     tla = toxicity_label_accuracy(output, expected, input)
     if tla and tla["score"] < 1.0 and expected.get("is_toxic"):
         tags.append("label_mismatch")
@@ -340,16 +298,26 @@ def tag_failure_modes(output: dict, expected: dict, input: dict) -> list:
 # All scorers list — pass to Eval(scores=ALL_SCORERS)
 # ---------------------------------------------------------------------------
 
+def llm_judges(output, expected, input, **kwargs):
+    """
+    Combined LLM-judge scorer. Fires the remaining Haiku calls concurrently so
+    they complete in roughly the time of one instead of sequential calls.
+    Returns a list of score dicts; Braintrust unpacks them into separate columns.
+    """
+    _judges = [deescalation_quality, snippet_grounding]
+    with ThreadPoolExecutor(max_workers=len(_judges)) as pool:
+        futures = [pool.submit(fn, output, expected, input, **kwargs) for fn in _judges]
+        results = [f.result() for f in futures]
+    return [r for r in results if r is not None] or None
+
+
 ALL_SCORERS = [
     scope_containment,
     report_posted,
     toxicity_label_accuracy,
     false_positive_flag,
     retrieval_completeness,
-    deescalation_quality,
-    tone_suitability,
-    specificity,
-    snippet_grounding,
+    llm_judges,
     token_efficiency,
     tool_call_efficiency,
     latency_score,
