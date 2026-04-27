@@ -12,7 +12,7 @@
 
 
 ## Overview
-This doc explains the building and executing of a **Community Health First Responder** task. This task involves an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses. 
+This doc explains the building and executing of an evaluation of different architectural choices for the **Community Health First Responder** task. This task involves an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses. 
 
 The primary research question is: **does a CLI-based workflow (using `gh`) or an MCP-based workflow (using the GitHub MCP Server) produce better outcomes on this task, and at what cost?** This spec covers dataset design, task definition, scorer suite, failure taxonomy, and analysis strategy, grounded in current OSS toxicity research and both platforms' documented capabilities.
 
