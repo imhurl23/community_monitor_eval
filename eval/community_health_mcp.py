@@ -21,6 +21,8 @@ import asyncio
 import json
 import os
 import time
+import urllib.error
+import urllib.request
 
 import anthropic
 import braintrust
@@ -50,12 +52,14 @@ RETRIEVAL_MODEL = os.environ.get("RETRIEVAL_MODEL", "claude-haiku-4-5-20251001")
 RETRIEVAL_COST_PER_MTOK = MODEL_PRICING[RETRIEVAL_MODEL]
 MCP_SSE_URL = os.environ.get("MCP_SSE_URL", "http://localhost:8080/sse")
 EVAL_OUTPUT_BOARD = os.environ.get("EVAL_OUTPUT_BOARD", "eval-output-board")
+LABEL_CLASSIFIER_MODEL = os.environ.get("LABEL_CLASSIFIER_MODEL", "claude-sonnet-4-20250514")
 
 # Throttle limits — override via env vars to prevent runaway spend
 MAX_AGENT_TURNS = int(os.environ.get("MAX_AGENT_TURNS", "10"))
-MAX_TOTAL_TOKENS = int(os.environ.get("MAX_TOTAL_TOKENS", "50000"))
+MAX_TOTAL_TOKENS = int(os.environ.get("MAX_TOTAL_TOKENS", "80000"))
 MAX_TOOL_CALLS = int(os.environ.get("MAX_TOOL_CALLS", "6"))        # total tool calls per row
 MAX_LATENCY_MS = int(os.environ.get("MAX_LATENCY_MS", "120000"))   # 2-min wall-clock limit per row
+MAX_TOOL_EXEC_SECONDS = float(os.environ.get("MAX_TOOL_EXEC_SECONDS", "30"))
 # Cost optimisation — tip 2: 8 K chars ≈ 2 K tokens, enough for any real thread.
 # Paginated responses can exceed 100 K chars and inflate context on every re-sent turn.
 MAX_TOOL_RESULT_CHARS = int(os.environ.get("MAX_TOOL_RESULT_CHARS", "8000"))
@@ -90,6 +94,104 @@ def _get_mcp_semaphore() -> asyncio.Semaphore:
 # title + body + comment texts cuts each tool_result by ~60%, reducing the context
 # re-sent to the LLM on every subsequent turn.
 _READ_TOOLS = {"get_issue", "get_issue_comments", "get_pull_request", "get_pull_request_comments"}
+
+
+def _build_report_body(repo: str, dtype: str, number: int, output: dict) -> str:
+    if output.get("toxic_detected"):
+        snippet = output.get("snippet") or "[none]"
+        label = output.get("toxicity_label") or "[none]"
+        severity = output.get("severity") or "[none]"
+        response = output.get("draft_response") or "[none]"
+        return "\n".join([
+            f"# Community Health Report for {repo} {dtype} #{number}",
+            "",
+            "## Finding",
+            "Toxic or discouraging content detected.",
+            "",
+            "## Snippet",
+            f"> {snippet}",
+            "",
+            "## Label",
+            label,
+            "",
+            "## Severity",
+            severity,
+            "",
+            "## Proposed maintainer response",
+            response,
+        ])
+
+    return "\n".join([
+        f"# Community Health Report for {repo} {dtype} #{number}",
+        "",
+        "No toxic or discouraging content detected. No action needed.",
+    ])
+
+
+def _post_report_issue(board_repo: str, title: str, body: str) -> str:
+    owner_repo = board_repo if "/" in board_repo else board_repo
+    api_url = f"https://api.github.com/repos/{owner_repo}/issues"
+    payload = json.dumps({"title": title, "body": body}).encode("utf-8")
+    token = os.environ.get("GITHUB_AGENT_TOKEN", "")
+    request = urllib.request.Request(
+        api_url,
+        data=payload,
+        method="POST",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            created = json.loads(response.read().decode("utf-8"))
+            return created.get("html_url", "")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GitHub issue create failed: HTTP {exc.code} {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"GitHub issue create failed: {exc.reason}") from exc
+
+
+def _classify_toxicity_label(client: anthropic.Anthropic, thread_text: str, snippet: str | None) -> str | None:
+    prompt = f"""Choose exactly one toxicity label for the GitHub thread below.
+
+Valid labels:
+- hostile_aggression
+- entitlement
+- dismissive_tone
+- sarcasm_belittling
+- passive_aggression
+- gatekeeping
+- thread_derailment
+- object_directed
+
+Return only the label text, with no explanation.
+
+Problematic snippet:
+{snippet or '[none]'}
+
+Thread text:
+{thread_text[:6000]}"""
+    response = client.messages.create(
+        model=LABEL_CLASSIFIER_MODEL,
+        max_tokens=50,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    label = response.content[0].text.strip()
+    allowed = {
+        "hostile_aggression",
+        "entitlement",
+        "dismissive_tone",
+        "sarcasm_belittling",
+        "passive_aggression",
+        "gatekeeping",
+        "thread_derailment",
+        "object_directed",
+    }
+    return label if label in allowed else None
 
 
 def _compress_tool_result(tool_name: str, result_text: str) -> str:
@@ -142,6 +244,7 @@ async def mcp_agent_task(input: dict) -> dict:
     llm_turns = 0
     per_turn_tokens = []
     tool_error_count = 0
+    retrieved_thread_parts = []
     output = {}
 
     # Measure queue wait separately so it doesn't inflate latency_ms or eat
@@ -187,21 +290,13 @@ Step 2 — Analyze the thread for toxic or discouraging content using this OSS-s
 - thread_derailment: personal attacks displacing technical discussion
 - object_directed: hostility directed at code/project ("this codebase is trash")
 
-Step 3 — Post a Community Health Report as a new issue using create_issue:
-  owner: "{BOARD_OWNER}"
-  repo: "{BOARD_REPO}"
-  title: "Community Health Report — {repo} — {dtype} #{number}"
-  body: A markdown report with your finding, snippet, label, severity, and proposed maintainer
-        response — or "No toxic or discouraging content detected. No action needed." if clean.
-
-Step 4 — Respond ONLY with a JSON object — no markdown, no preamble:
+Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
 {{
   "toxic_detected": true or false,
   "snippet": "exact quoted text from the thread that is problematic, or null",
-  "toxicity_label": "one label from the schema above, or null",
+    "toxicity_label": "if toxic_detected is true, choose exactly one label from the schema above",
   "severity": "low, medium, or high, or null",
-  "draft_response": "a de-escalating maintainer response, or null if not toxic",
-  "retrieved_thread_text": "full concatenated thread text you retrieved"
+    "draft_response": "a de-escalating maintainer response, or null if not toxic"
 }}""",
                     }]
 
@@ -287,7 +382,15 @@ Step 4 — Respond ONLY with a JSON object — no markdown, no preamble:
                             tool_calls_log.append({"tool": block.name, "args": logged_args})
 
                             tool_exec_start = time.time()
-                            result = await session.call_tool(block.name, args)
+                            try:
+                                result = await asyncio.wait_for(
+                                    session.call_tool(block.name, args),
+                                    timeout=MAX_TOOL_EXEC_SECONDS,
+                                )
+                            except TimeoutError as exc:
+                                raise RuntimeError(
+                                    f"MCP tool {block.name} timed out after {MAX_TOOL_EXEC_SECONDS}s"
+                                ) from exc
                             total_tool_ms += int((time.time() - tool_exec_start) * 1000)
 
                             result_text = "\n".join(
@@ -307,6 +410,8 @@ Step 4 — Respond ONLY with a JSON object — no markdown, no preamble:
                             # so the character budget is spent on content, not timestamps/labels.
                             result_text = _compress_tool_result(block.name, result_text)
                             result_text = result_text[:MAX_TOOL_RESULT_CHARS]
+                            if block.name in _READ_TOOLS:
+                                retrieved_thread_parts.append(result_text)
 
                             tool_results.append({
                                 "type": "tool_result",
@@ -321,7 +426,27 @@ Step 4 — Respond ONLY with a JSON object — no markdown, no preamble:
                         })
                         messages.append({"role": "user", "content": tool_results})
 
-    thread_text = output.pop("retrieved_thread_text", "")
+    thread_text = "\n".join(retrieved_thread_parts)
+    if output.get("toxic_detected"):
+        output["toxicity_label"] = _classify_toxicity_label(
+            client,
+            thread_text,
+            output.get("snippet"),
+        ) or output.get("toxicity_label")
+
+    report_title = f"Community Health Report — {repo} — {dtype} #{number}"
+    report_body = _build_report_body(repo, dtype, number, output)
+    try:
+        report_url = _post_report_issue(EVAL_OUTPUT_BOARD, report_title, report_body)
+    except RuntimeError as exc:
+        output["report_post_error"] = str(exc)
+    else:
+        tool_calls_log.append({
+            "tool": "create_issue",
+            "args": {"repo": EVAL_OUTPUT_BOARD.split("/")[-1], "title": report_title, "body": report_body},
+            "result": report_url,
+        })
+
     retrieved_comment_count = thread_text.count("\n[") if thread_text else 0
     latency_ms = int((time.time() - start_time) * 1000)
     analysis_input_tokens = total_input_tokens - retrieval_input_tokens

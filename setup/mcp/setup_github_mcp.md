@@ -8,7 +8,7 @@ Setup guide for running the GitHub MCP server locally via Docker and exposing it
 
 - Docker Desktop installed and running (`docker ps` works)
 - Python 3.10+ with `pip`
-- A GitHub Personal Access Token (PAT) with `repo:read` scope
+- A GitHub Personal Access Token (PAT) with read access to the source repos and write access to the eval output board repo
 - Your PAT exported as `GITHUB_AGENT_TOKEN` in your shell profile
 
 ---
@@ -127,23 +127,26 @@ Expected: a text block containing the issue title. If you get a tool-use block f
 
 ## Step 6: Use in eval scripts
 
-When constructing your Anthropic client in any eval script, always include the beta header and pass the local SSE URL:
+The current eval code does not use Anthropic's `mcp_servers=` parameter directly. Instead, it uses the Python MCP SDK to talk to the local bridge and then sends the tool results back into Anthropic as standard tool-use messages:
 
 ```python
 import anthropic
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 
-client = anthropic.Anthropic(
-    default_headers={"anthropic-beta": "mcp-client-2025-04-04"}
-)
+client = anthropic.Anthropic(max_retries=4)
 
-mcp_servers = [{
-    "type": "url",
-    "url": "http://localhost:8080/sse",
-    "name": "github"
-}]
+async with sse_client("http://localhost:8080/sse") as (read, write):
+    async with ClientSession(read, write) as session:
+        await session.initialize()
+        tools_result = await session.list_tools()
+        result = await session.call_tool(
+            "get_issue",
+            {"owner": "eslint", "repo": "eslint", "issue_number": 17823},
+        )
 ```
 
-Pass `mcp_servers=mcp_servers` into every `client.messages.create()` call that needs GitHub tool access.
+This is the integration style used by `community_health_mcp.py`.
 
 ---
 
@@ -153,7 +156,7 @@ Pass `mcp_servers=mcp_servers` into every `client.messages.create()` call that n
 |---|---|---|
 | `GITHUB_PERSONAL_ACCESS_TOKEN not set` | Variable not expanding inside script | Use inline `-- docker run ... -e VAR="$GITHUB_AGENT_TOKEN"` form, not a wrapper script |
 | `Connection closed` in mcp-proxy traceback | Docker container exited immediately | Run the Docker command directly first to confirm the token works |
-| `mcp_servers` param silently ignored | Missing beta header | Add `"anthropic-beta": "mcp-client-2025-04-04"` to client headers |
+| Anthropic call has no GitHub tool access | Code is using plain Anthropic client without MCP SDK session | Open the local SSE bridge with `sse_client(...)` and execute tools through `ClientSession` |
 | Proxy starts but test call hangs | Docker not running | Run `docker ps` to confirm Docker Desktop is active |
 | Empty tool results on PR threads | Wrong tool selected | Confirm Claude called `get_issue_comments` not `get_pull_request_comments` for issue threads |
 

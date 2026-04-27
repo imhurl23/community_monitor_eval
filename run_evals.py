@@ -36,7 +36,7 @@ MCP_SSE_URL = os.environ.get("MCP_SSE_URL", "http://localhost:8080/sse")
 
 REQUIRED_ENV_VARS = {
     "BRAINTRUST_API_KEY": "Braintrust API key (https://www.braintrust.dev/app/settings)",
-    "GITHUB_AGENT_TOKEN": "GitHub PAT with repo:read scope",
+    "GITHUB_AGENT_TOKEN": "GitHub PAT with read access to source repos and write access to the eval output board",
     "EVAL_OUTPUT_BOARD": "Sandbox repo for Community Health Reports, as owner/repo (e.g. imhurl23/eval-output-board)",
 }
 ANTHROPIC_PREFLIGHT_MODEL = os.environ.get("ANTHROPIC_PREFLIGHT_MODEL", "claude-haiku-4-5-20251001")
@@ -198,7 +198,7 @@ def main():
         metavar="N",
         type=int,
         default=None,
-        help="Max parallel eval subprocesses (default: number of workflow × run combinations)",
+        help="Max parallel eval subprocesses (default: conservative cap when MCP is enabled)",
     )
     args = parser.parse_args()
 
@@ -229,7 +229,14 @@ def main():
         if run_mcp:
             tasks.append((run_number, "community_health_mcp.py", "MCP"))
 
-    max_workers = args.max_workers or len(tasks)
+    if args.max_workers is not None:
+        max_workers = args.max_workers
+    elif run_mcp and run_cli:
+        max_workers = 2
+    elif run_mcp:
+        max_workers = 1
+    else:
+        max_workers = len(tasks)
     all_results = {rn: {} for rn in run_numbers}
     pending_tasks = deque(tasks)
     fatal_reason = None
