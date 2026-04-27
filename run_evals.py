@@ -33,6 +33,7 @@ MCP_SSE_URL = os.environ.get("MCP_SSE_URL", "http://localhost:8080/sse")
 REQUIRED_ENV_VARS = {
     "BRAINTRUST_API_KEY": "Braintrust API key (https://www.braintrust.dev/app/settings)",
     "GITHUB_AGENT_TOKEN": "GitHub PAT with repo:read scope",
+    "EVAL_OUTPUT_BOARD": "Sandbox repo for Community Health Reports, as owner/repo (e.g. imhurl23/eval-output-board)",
 }
 
 
@@ -127,7 +128,8 @@ def run_eval(script: str, run_number: str, label: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="Run community health evals")
-    parser.add_argument("--run", metavar="N", help="Explicit run number")
+    parser.add_argument("--run", metavar="N", help="Explicit starting run number")
+    parser.add_argument("--runs", metavar="N", type=int, default=5, help="Number of runs (default: 5)")
     parser.add_argument(
         "--only",
         choices=["cli", "mcp"],
@@ -150,27 +152,34 @@ def main():
         if not check_mcp_proxy():
             sys.exit(1)
 
-    run_number = resolve_run_number(args.run)
-    print(f"\nRun number: {run_number}")
+    start_run = resolve_run_number(args.run)
+    run_numbers = [str(int(start_run) + i) for i in range(args.runs)]
+    # Persist the last run number so the next invocation continues from there
+    _write_runfile(run_numbers[-1])
 
-    results = {}
+    print(f"\nRuns: {', '.join(run_numbers)}")
 
-    if run_cli:
-        results["cli"] = run_eval("community_health_cli.py", run_number, "CLI")
+    all_results = {}  # keyed by run_number
 
-    if run_mcp:
-        results["mcp"] = run_eval("community_health_mcp.py", run_number, "MCP")
+    for run_number in run_numbers:
+        run_results = {}
+        if run_cli:
+            run_results["cli"] = run_eval("community_health_cli.py", run_number, "CLI")
+        if run_mcp:
+            run_results["mcp"] = run_eval("community_health_mcp.py", run_number, "MCP")
+        all_results[run_number] = run_results
 
     # Summary
     print(f"\n{'='*60}")
     print("  Summary")
     print(f"{'='*60}")
     all_passed = True
-    for workflow, passed in results.items():
-        icon = "✓" if passed else "✗"
-        print(f"  {icon}  {workflow}")
-        if not passed:
-            all_passed = False
+    for run_number, run_results in all_results.items():
+        for workflow, passed in run_results.items():
+            icon = "✓" if passed else "✗"
+            print(f"  {icon}  run {run_number}  {workflow}")
+            if not passed:
+                all_passed = False
 
     if not all_passed:
         sys.exit(1)

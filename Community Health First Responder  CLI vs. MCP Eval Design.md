@@ -1,17 +1,34 @@
 # Community Health First Responder: CLI vs. MCP Eval Design
 
+## TLDR: What workflow (CLI/MCP) is going to help us monitor and keep our open source communities growing and effective? 
+
+
 ## Overview
-This document is a evaluation specification for the **Community Health First Responder** task  an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses. The primary research question is: **does a CLI-based workflow (using `gh`) or an MCP-based workflow (using the GitHub MCP Server) produce better outcomes on this task, and at what cost?** The spec covers dataset design, task definition, scorer suite, failure taxonomy, and analysis strategy, grounded in current OSS toxicity research and both platforms' documented capabilities.
+This doc explains the building and executing of a **Community Health First Responder** task. This task involves an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses. 
+
+The primary research question is: **does a CLI-based workflow (using `gh`) or an MCP-based workflow (using the GitHub MCP Server) produce better outcomes on this task, and at what cost?** This spec covers dataset design, task definition, scorer suite, failure taxonomy, and analysis strategy, grounded in current OSS toxicity research and both platforms' documented capabilities.
+
+The broader pattern this eval instantiates — retrieval interface comparison + downstream content quality measurement — maps onto a class of problems identified in the OPENTOOLS framework and the four-pillar agent assessment framework from (https://arxiv.org/pdf/2604.00137)[`Open, Reliable, and Collective: A Community-Driven Framework for
+Tool-Using AI Agents`]: any task where tool selection and retrieval completeness directly affect the quality of a subsequent LLM generation step benefits from this two-axis design (deterministic retrieval scorers + LLM-judge generation scorers). The GitHub community health task is a particularly clean instantiation because the ground truth is human-annotatable, the write-safety constraint is crisp, and the CLI/MCP tooling gap is structurally well-documented
+
+Hypothesis 1 (Effectiveness): The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by human labels and LLM‑judge scores for (a) correct detection of harmful threads, (b) correct toxicity labeling, and (c) quality of de‑escalation drafts, because MCP exposes more structured, semantically rich GitHub tools that support more complete and targeted retrieval.
+
+Hypothesis 2 (Efficiency / Cost): The CLI‑based workflow will achieve comparable task quality at lower operational cost than the MCP‑based workflow, as measured by total tokens, wall‑clock latency, and number of tool calls per evaluation example, because driving gh through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
+
+Hypothesis 3 (Retrieval interface ↔ failure modes): The distribution of failure modes will differ systematically between workflows: MCP runs will exhibit fewer retrieval incompleteness and irrelevant‑context failures but more tool‑selection / protocol misuse failures, while CLI runs will show the inverse pattern, with more partial retrieval and parsing / heuristic limits but fewer MCP‑specific tool‑use failures.
 
 
-The broader pattern this eval instantiates — retrieval interface comparison + downstream content quality measurement — maps onto a class of problems identified in the OPENTOOLS framework and the four-pillar agent assessment framework from arXiv: any task where tool selection and retrieval completeness directly affect the quality of a subsequent LLM generation step benefits from this two-axis design (deterministic retrieval scorers + LLM-judge generation scorers). The GitHub community health task is a particularly clean instantiation because the ground truth is human-annotatable, the write-safety constraint is crisp, and the CLI/MCP tooling gap is structurally well-documented
+
 ***
 
 ## Background and Motivation
 
-Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely. Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums — it skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities. The ToxiShield framework (2026) identifies eleven fine-grained toxicity sub-categories in code review texts, achieving a 97% F1-score with a fine-tuned BERT classifier.[^1][^2][^3][^4]
+Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely. Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums. It skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.
 
-An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP — also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.[^5]
+Github survey: https://conf.researchr.org/details/esem-2025/esem-2025-technical-track/24/The-Shifting-Sands-of-Toxicity-The-Evolving-Nature-of-Interpersonal-Challenges-in-Op 
+CM Study: https://techxplore.com/news/2022-06-toxicity-open-source-varies-internet-forums.html
+
+An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP — also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
 
 ***
 
@@ -34,49 +51,56 @@ Before defining the dataset, a shared label schema is needed. The following eigh
 
 ## Dataset Design
 
-### Source Repository
+### Source Repositories
 
-Use a single, active, mid-size OSS repository with a documented history of heated discussions. Candidate properties:
+Using active, mid-size OSS repositories with a documented history of heated discussions. Candidate properties:
 - Minimum 500 open issues/PRs
 - Active contributor base (10+ unique commenters in the last 90 days)
 - No existing bot-moderation that would pre-filter toxic content
 - Public repository (no auth scope required beyond `repo:read`)
-- *starting with pandas-dev/pandas* 
 
-
-Concrete candidates: `curl/curl`, `neovim/neovim`, `eslint/eslint`, `home-assistant/core`. The eval is repo-agnostic by design.
+The eval is repo-agnostic by design, but the v1 dataset and results are pooled from an initial set of: pandas-dev/pandas, home-assistant/core, nodejs/node, rust-lang/rust, kubernetes/kubernetes. 
 
 ### Dataset Construction
+***The dataset consists of N discussion items (a mix of issues and PRs from the set of OSS repos), each forming one eval row. The current community-health-v1 build has X items sampled from the aformentioned five-repo set; that number scales linearly with the number of repos and the per-stratum cap. Construction proceeds in two phases.
 
-The dataset consists of **20 discussion items** (a mix of issues and PRs), each forming one eval row. Construction proceeds in two phases:
+Phase 1 — Two-pass sampling. The pipeline first does a cheap metadata sweep, then runs ToxiShield only on threads that could land in a non-control stratum, then stratifies into four buckets and samples per (repo, stratum) cell to prevent any one chatty repo from dominating.
 
-**Phase 1 — Sampling.** Use stratified sampling across four strata to avoid over-indexing on one toxicity type:
+Stratum	Default cap per repo	Sampling criterion
+clearly_toxic_candidate	20	At least one comment with ToxiShield prob ≥ 0.7 OR GitHub maintainers locked the thread with active_lock_reason == "too heated"
+borderline_candidate	20	At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone
+heated_not_toxic_candidate	20	≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language
+control_candidate	20	≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads
+Two design choices in this stratification matter for downstream metrics:
 
-| Stratum | Count | Sampling Criterion |
-|---|---|---|
-| Clearly toxic | 5 | Contains a comment manually confirmed as hostile or entitled |
-| Borderline / subtle | 5 | Flagged by ToxiCR with probability 0.4–0.7; human ambiguity |
-| Heated but not toxic | 5 | High comment volume, disagreement, but no toxic language |
-| Control (benign) | 5 | Low-activity, constructive threads |
+The borderline and control strata are essential for measuring false-positive rates and scope_containment integrity. An agent that flags every heated thread fails just as surely as one that misses genuine toxicity.
 
-The borderline and control strata are essential for measuring false-positive rates and `scope_containment` integrity. An agent that flags every heated thread fails just as surely as one that misses genuine toxicity.
+The clearly_toxic_candidate stratum is fed by two independent signals. ToxiShield catches lexically explicit toxicity; GitHub's too heated lock-reason catches threads that the classifier missed (≈71% precision in pilot review). Routing both into the same bucket means one annotation cap covers both classifier-flagged and lock-flagged candidates. The original classifier verdict is preserved on metadata.classifier_stratum so post-annotation analysis can compare the two signals.
 
-**Phase 2 — Ground truth annotation.** For each of the 20 items, produce a human-annotated reference that includes:
-- A binary toxicity judgment (`toxic` / `not_toxic`)
-- If toxic: one or more labels from the schema above
-- A gold-standard maintainer response (written by a human with OSS maintainer experience)
-- A `severity` score: `low` / `medium` / `high`
+Phase 2 — Ground truth annotation. For each sampled item, an annotator produces:
 
-The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison. This aligns with how Braintrust's `LLMClassifierFromTemplate` pattern works.[^9]
+A binary toxicity judgment (is_toxic: true / false)
 
-### Dataset Schema (per row)
+If toxic: one or more labels from the 8-label schema (hostile_aggression, entitlement, dismissive_tone, sarcasm_belittling, passive_aggression, gatekeeping, thread_derailment, object_directed)
 
-```json
+A severity score: low / medium / high
+
+A problematic_snippet quote
+
+A gold-standard maintainer response (written by a human with OSS maintainer experience)
+
+To speed annotation, every row ships with a _review.suspect_comments payload — the top 3 highest-probability comments in the thread, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The _review.* namespace is for the human only; it is stripped before the row is shown to the agent under test.
+
+The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison. This aligns with how Braintrust's LLMClassifierFromTemplate pattern works.[^9]
+
+Dataset Schema (per row)
+json
 {
   "id": "eslint-issue-17823",
   "repo": "eslint/eslint",
   "discussion_type": "issue",
   "discussion_number": 17823,
+  "url": "https://github.com/eslint/eslint/issues/17823",
   "ground_truth": {
     "is_toxic": true,
     "toxicity_labels": ["entitlement", "dismissive_tone"],
@@ -86,46 +110,59 @@ The gold response is used as a soft reference for LLM-judge scoring, not for exa
   },
   "metadata": {
     "comment_count": 14,
+    "unique_commenter_count": 6,
     "first_toxic_comment_index": 3,
-    "is_newcomer_involved": true
+    "is_newcomer_involved": true,
+    "max_toxicity_prob": 0.83,
+    "mean_toxicity_prob": 0.21,
+    "stratum": "clearly_toxic_candidate",
+    "classifier_stratum": "borderline_candidate",
+    "active_lock_reason": "too heated"
+  },
+  "_review": {
+    "suspect_comments": [
+      {
+        "comment_id": 12345,
+        "author_login": "...",
+        "author_association": "NONE",
+        "comment_created_at": "2024-...",
+        "toxicity_prob": 0.94,
+        "body_preview": "first 600 chars..."
+      }
+    ]
   }
 }
-```
+Two metadata fields deserve a note. stratum is the bucket the row was sampled under (post-lock-overlay); classifier_stratum is what ToxiShield alone would have produced. When they differ, the row was promoted into clearly_toxic_candidate by the lock signal — which is exactly the data needed to study where the classifier and the maintainer's own moderation action disagreed.
 
-All 20 rows are committed to a Braintrust Dataset named `community-health-v1` so both workflow variants draw from the same immutable input.[^10]
+All rows are committed to a Braintrust Dataset named community-health-v1 so both workflow variants draw from the same immutable input.[^10] The Braintrust insert uses the row id as the primary key, so re-running the curation script updates rows in place rather than producing duplicates — useful for adding new repos to the pool without invalidating existing annotations.
 
-***
-
-## Task Definition
-
-### Agent Task
-
+Task Definition: 
+Agent Task
 Given a GitHub discussion (issue or PR), the agent must:
 
-1. **Retrieve** the full comment thread for that discussion
-2. **Identify** whether any comment is potentially toxic or discouraging
-3. **If toxic:** quote the problematic snippet, assign a label from the schema, and draft a maintainer de-escalation response
-4. **If not toxic:** return a structured "no action needed" response
+Retrieve the full comment thread for that discussion
 
-The agent must not post, edit, or delete any live GitHub content. All writes go exclusively to the designated `eval-output-board` repository (a sandbox repo created for evaluation output only). This is the `scope_containment` constraint.
+Identify whether any comment is potentially toxic or discouraging
 
-### Output Schema
+If toxic: quote the problematic snippet, assign one or more labels from the 8-label schema, assign a severity, and draft a maintainer de-escalation response
 
-```json
+If not toxic: return a structured "no action needed" response
+
+The agent must not post, edit, or delete any live GitHub content. All writes go exclusively to the designated eval-output-board repository (a sandbox repo created for evaluation output only). This is the scope_containment constraint.
+
+Output Schema
+json
 {
   "discussion_id": "eslint-issue-17823",
   "toxic_detected": true,
   "snippet": "Why do maintainers even bother if they can't close issues in under a week?",
-  "toxicity_label": "entitlement",
+  "toxicity_labels": ["entitlement", "dismissive_tone"],
   "severity": "medium",
   "draft_response": "Thank you for raising this. We understand the frustration when resolution timelines feel slow...",
   "tool_calls": [...],
   "latency_ms": 4200,
   "total_tokens": 1850
 }
-```
-
-***
 
 ## Workflow Implementations
 
@@ -253,7 +290,7 @@ Checks that the draft response references the actual concern raised (not a gener
 
 **`snippet_grounding`** (binary: 0 or 1)
 
-Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard — an agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.[^16][^17]
+Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard — an agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.[^16]
 
 ***
 
@@ -288,7 +325,7 @@ Project: community-health-eval
 └── Experiment: mcp-baseline-run-3
 ```
 
-Each workflow variant is run three times to measure **variability**. LLM-judge scores are non-deterministic; running three trials and reporting mean ± std captures stochastic noise. Diff mode in the Braintrust UI enables side-by-side comparison of CLI vs. MCP experiment runs.[^18][^19]
+Each workflow variant is run three times to measure **variability**. LLM-judge scores are non-deterministic; running three trials and reporting mean ± std captures stochastic noise.
 
 ### Metadata Tags per Row
 
@@ -435,11 +472,7 @@ The structured format allows a deterministic checker to verify that all five req
 
 16. [A comprehensive taxonomy of hallucinations in Large Language ...](https://arxiv.org/abs/2508.01781) - It analyzes the underlying causes, categorizing them into data-related issues, model-related factors...
 
-17. [Hallucinations Are Custom: Introducing Dynamo AI's LLM Failure ...](https://www.dynamo.ai/blog/hallucinations-are-custom-introducing-dynamos-llm-failure-mode-taxonomy) - We've consistently found that today's hallucination evaluations fail to capture the complexities of ...
 
-18. [Module 6: Building a simple eval using Braintrust SDK](https://www.youtube.com/watch?v=Zu-VYKf3WGQ&vl=ja) - In Module six of Braintrust's Evals course, we move beyond the UI and start building with the Braint...
-
-19. [Intro to Braintrust: AI Observability and Evals](https://www.youtube.com/watch?v=qpmMxRwXzEQ) - An end-to-end walkthrough of Braintrust, the AI observability platform for building quality AI produ...
 
 20. [Broadcast to Braintrust | OpenRouter Observability | Documentation](https://openrouter.ai/docs/guides/features/broadcast/braintrust) - Connect Braintrust to automatically receive traces from your OpenRouter requests. Step-by-step setup...
 

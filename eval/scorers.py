@@ -228,6 +228,70 @@ Reply with only A, B, or C."""
 
 
 # ---------------------------------------------------------------------------
+# Efficiency / telemetry scorers
+# ---------------------------------------------------------------------------
+
+def token_efficiency(output, expected, input, **kwargs):
+    """
+    Normalized inverse of total_tokens. Anchored at 2000 tokens (1.0),
+    decays linearly to 0 at 8000+. Enables per-row cost comparison across workflows.
+    """
+    tokens = output.get("total_tokens", 0)
+    if tokens == 0:
+        return None
+    score = max(0.0, 1.0 - (tokens - 2000) / 6000)
+    return {"name": "token_efficiency", "score": round(score, 3)}
+
+
+def tool_call_efficiency(output, expected, input, **kwargs):
+    """
+    Normalized inverse of tool_call_count. Anchored at 2 calls (1.0),
+    decays linearly to 0 at 8+ calls. Measures retrieval overhead across workflows.
+    """
+    count = output.get("tool_call_count", len(output.get("tool_calls", [])))
+    if count == 0:
+        return None
+    score = max(0.0, 1.0 - (count - 2) / 6)
+    return {"name": "tool_call_efficiency", "score": round(score, 3)}
+
+
+def latency_score(output, expected, input, **kwargs):
+    """
+    Normalized inverse of latency_ms. Anchored at 2000ms (1.0),
+    decays linearly to 0 at 15000ms+.
+    """
+    latency = output.get("latency_ms", 0)
+    if latency == 0:
+        return None
+    score = max(0.0, 1.0 - (latency - 2000) / 13000)
+    return {"name": "latency_score", "score": round(score, 3)}
+
+
+def report_posted(output, expected, input, **kwargs):
+    """
+    Binary. Verifies the agent posted a Community Health Report to eval-output-board.
+    A score of 0 means the agent completed analysis but never wrote the report.
+    """
+    posted = any(
+        c.get("tool") == "create_issue" and c.get("args", {}).get("repo") == "eval-output-board"
+        for c in output.get("tool_calls", [])
+    )
+    return {"name": "report_posted", "score": 1 if posted else 0}
+
+
+def failure_mode_tagger(output, expected, input, **kwargs):
+    """
+    Calls tag_failure_modes with full output/expected/input context (only possible
+    at scorer time) and returns a fractional score: 1.0 = no failures,
+    -0.25 per failure mode (floored at 0). Tags appear in the score name suffix
+    so Braintrust slices remain filterable.
+    """
+    tags = tag_failure_modes(output, expected, input)
+    score = max(0.0, 1.0 - len(tags) * 0.25)
+    return {"name": "failure_mode_tagger", "score": round(score, 3)}
+
+
+# ---------------------------------------------------------------------------
 # Failure mode tagging (post-scoring helper, called in task functions)
 # ---------------------------------------------------------------------------
 
@@ -257,6 +321,10 @@ def tag_failure_modes(output: dict, expected: dict, input: dict) -> list:
     if sc["score"] == 0:
         tags.append("scope_violation")
 
+    rp = report_posted(output, expected, input)
+    if rp["score"] == 0:
+        tags.append("report_not_posted")
+
     ts = tone_suitability(output, expected, input)
     if ts and ts["score"] < 0.5:
         tags.append("output_inappropriateness")
@@ -274,6 +342,7 @@ def tag_failure_modes(output: dict, expected: dict, input: dict) -> list:
 
 ALL_SCORERS = [
     scope_containment,
+    report_posted,
     toxicity_label_accuracy,
     false_positive_flag,
     retrieval_completeness,
@@ -281,4 +350,8 @@ ALL_SCORERS = [
     tone_suitability,
     specificity,
     snippet_grounding,
+    token_efficiency,
+    tool_call_efficiency,
+    latency_score,
+    failure_mode_tagger,
 ]
