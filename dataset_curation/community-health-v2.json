@@ -1,0 +1,2626 @@
+[
+  {
+    "id": "pandas-pr-65127",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65127,
+    "url": "https://github.com/pandas-dev/pandas/pull/65127",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 26,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 15,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9977846741676331,
+      "mean_toxicity_prob": 0.03916636156365992,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3113976249,
+          "author_login": "Julian-Harbeck",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-04-20T22:16:37Z",
+          "toxicity_prob": 0.9977846741676331,
+          "body_preview": "@jbrockmendel I tried using `pytest.xfail` inside of the `TestArrowArray::test_values_for_json` function, but now saw that this is forbidden in pre-commit. Any idea how to approach it? I cannot use `@pytest.mark.xfail` here due to some `ArrowDtype` passing and also the error depends on the dtype. Adding the mark in the parametrization of `dtype` would work, but this is pretty ugly in my opinion (through `indirect=True` we are passing this parametrized `dtype` instead of the normal `dtype` fixture to the `data` fixture):\n\n```python\n    @pytest.mark.filterwarnings(\n        \"ignore:The default 'e\u2026"
+        },
+        {
+          "comment_id": 3111921014,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-20T15:49:19Z",
+          "toxicity_prob": 0.0034866733476519585,
+          "body_preview": "should this just be an xfail?"
+        },
+        {
+          "comment_id": 3112158319,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-20T16:25:51Z",
+          "toxicity_prob": 0.0029942477121949196,
+          "body_preview": "we dont generally check for match in the xfail decorator (or about pylance)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64996",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64996,
+    "url": "https://github.com/pandas-dev/pandas/pull/64996",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 23,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": 1,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9787801504135132,
+      "mean_toxicity_prob": 0.05516091268762703,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4179612204,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-02T18:16:44Z",
+          "toxicity_prob": 0.9787801504135132,
+          "body_preview": "> cls.dict is used instead of hasattr for efficiency, as it does a single O(1) lookup rather than walking the MRO.\n\ndoes this really make a difference?  will it mess up on e.g. cython-defined mixins?"
+        },
+        {
+          "comment_id": 4180367441,
+          "author_login": "DeeptimaanB",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-04-02T20:41:23Z",
+          "toxicity_prob": 0.2700168490409851,
+          "body_preview": "Good point! And you are right that there is a negligible improvement. I referred this link to understand the time complexity of hasattr(): https://pythoncomplexity.com/builtins/hasattr/\nWhich stated the Time complexity of attribute lookup is O(d) where d is MRO depth. Although it does mention that it is typically small <=10. Furthermore, I used dict instead of hasattr as hasattr finds eq and ne inherited from ExtensionArray and this behavior skips injecting element-wise fallbacks for those ops. As per my knowledge, I don't think it will mess up with cython-defined mixins. \n\nCurrently, none cyt\u2026"
+        },
+        {
+          "comment_id": 4187408043,
+          "author_login": "DeeptimaanB",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-04-04T16:58:24Z",
+          "toxicity_prob": 0.002522969152778387,
+          "body_preview": "Hello @jbrockmendel! Do tell me if the current version looks alright to you!"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64422",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64422,
+    "url": "https://github.com/pandas-dev/pandas/pull/64422",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 13,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": 1,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9993934631347656,
+      "mean_toxicity_prob": 0.0775105043206937,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2896957146,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-06T17:23:29Z",
+          "toxicity_prob": 0.9993934631347656,
+          "body_preview": "expected_type is a weird name isnt it?"
+        },
+        {
+          "comment_id": 4200785968,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-07T16:55:12Z",
+          "toxicity_prob": 0.0011171838268637657,
+          "body_preview": "you've got some pre-commit/code-check complaints. other than that LGTM. ping on green"
+        },
+        {
+          "comment_id": 2956318861,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-18T21:20:07Z",
+          "toxicity_prob": 0.000932081718929112,
+          "body_preview": "Please move this, possibly into validate_bool_kwarg"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63446",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63446,
+    "url": "https://github.com/pandas-dev/pandas/pull/63446",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 4,
+      "unique_commenter_count": 1,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9965083003044128,
+      "mean_toxicity_prob": 0.2557092134084087,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3678506761,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-21T06:19:43Z",
+          "toxicity_prob": 0.9965083003044128,
+          "body_preview": "@dattpatel123 Replace this \"doc/source/whatsnew/v3.0.rst\" as you changed this file, untick all code checks passed as you have 1 failing check why are you so dumb \ud83d\ude42"
+        },
+        {
+          "comment_id": 3678513385,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-21T06:31:05Z",
+          "toxicity_prob": 0.022151146084070206,
+          "body_preview": "I think you have lots of mistakes in your code please review the code first, otherwise we have to give you ai slop label !!"
+        },
+        {
+          "comment_id": 3678490439,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-21T05:55:19Z",
+          "toxicity_prob": 0.0035741974133998156,
+          "body_preview": "Are you providing unreviewed code of ai, you don't provide any info in description about your code change"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63915",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63915,
+    "url": "https://github.com/pandas-dev/pandas/pull/63915",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 90,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 23,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9995629191398621,
+      "mean_toxicity_prob": 0.011925912432747685,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2885460055,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-04T18:45:29Z",
+          "toxicity_prob": 0.9995629191398621,
+          "body_preview": "this note doesn't really describe the issue.  also whitespace is weird i think"
+        },
+        {
+          "comment_id": 3813222275,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-28T18:51:44Z",
+          "toxicity_prob": 0.0050691645592451096,
+          "body_preview": "so your pytest passed or failed?"
+        },
+        {
+          "comment_id": 3980953823,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-01T20:21:16Z",
+          "toxicity_prob": 0.005052209831774235,
+          "body_preview": "@Sharl0tteIsTaken can you get the tests passing?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63532",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63532,
+    "url": "https://github.com/pandas-dev/pandas/pull/63532",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 26,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": 6,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9996806383132935,
+      "mean_toxicity_prob": 0.03937628286075778,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2890971309,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-05T16:08:00Z",
+          "toxicity_prob": 0.9996806383132935,
+          "body_preview": "wont this screw up if you have more than one Decimal entry?"
+        },
+        {
+          "comment_id": 2890940856,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-05T16:03:00Z",
+          "toxicity_prob": 0.004898660816252232,
+          "body_preview": "can you assert what it is instead of what it isnt?"
+        },
+        {
+          "comment_id": 2890965774,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-05T16:07:02Z",
+          "toxicity_prob": 0.0018896178808063269,
+          "body_preview": "you don't need to make this positional-only"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64013",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64013,
+    "url": "https://github.com/pandas-dev/pandas/pull/64013",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 14,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9958076477050781,
+      "mean_toxicity_prob": 0.06707861128379591,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3917691778,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-17T23:56:03Z",
+          "toxicity_prob": 0.9958076477050781,
+          "body_preview": "Ugh, I think it's just that bash doesn't support `\\d`, have to use `[0-9]`."
+        },
+        {
+          "comment_id": 3844324402,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-03T23:18:22Z",
+          "toxicity_prob": 0.003065019380301237,
+          "body_preview": "I'm not familiar with how the banner works, I'm still not seeing the dev banner here."
+        },
+        {
+          "comment_id": 2771243803,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-05T21:31:37Z",
+          "toxicity_prob": 0.0007921223877929151,
+          "body_preview": "As an aside - why do we publish the dev tag?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63613",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63613,
+    "url": "https://github.com/pandas-dev/pandas/pull/63613",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 17,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 7,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9950174689292908,
+      "mean_toxicity_prob": 0.05917410150184022,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3757220145,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-01-15T22:34:44Z",
+          "toxicity_prob": 0.9950174689292908,
+          "body_preview": "Welp, this got ugly, and not because of https://github.com/pandas-dev/pandas/pull/63613#discussion_r2690504824. I noticed handling of the `na` argument was off. I think it ended up in an okay place (at least in terms behavior), still of a bit of a WIP, but wanted to put this up in case their were other suggestions as far as approaches go.\n\nI still need to handle `count`, `extract`, `extractall`, `findall`, `fullmatch`, `match`, `replace`, and `split`. At least `fullmatch` and `match` are the only two in that list with an `na` argument, so hopefully there isn't much more in the way of surprises\u2026"
+        },
+        {
+          "comment_id": 2690504824,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-01-14T13:50:39Z",
+          "toxicity_prob": 0.001250503701157868,
+          "body_preview": "Should this special case code live in `ArrowStringArray._str_contains` (or ArrowStringArrayMixin) instead?"
+        },
+        {
+          "comment_id": 3746972747,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-01-13T23:13:10Z",
+          "toxicity_prob": 0.0011605389881879091,
+          "body_preview": "Friendly ping @jorisvandenbossche @mroeschke"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-64711",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64711,
+    "url": "https://github.com/pandas-dev/pandas/issues/64711",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 5,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": 4,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9945324659347534,
+      "mean_toxicity_prob": 0.1994267358793877,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4263642851,
+          "author_login": "joelb123",
+          "author_association": "NONE",
+          "comment_created_at": "2026-04-16T21:50:15Z",
+          "toxicity_prob": 0.9945324659347534,
+          "body_preview": "Column attributes that can be saved and restored are highly valuable for permanency of metadata, such as physical units and long descriptions of a column. Keeping the metadata attached as attributes to the column can prevent errors from merging columns with different units. Dataframe-level attributes are not conceptually the same, and should not be confused, which is currently what happens when looking at column attributes (e.g., df.attrs == df[col].attrs for all values of col).\n\nParquet has support for both column (field) and file metadata. Dataframe-level user-defined attributes are currentl\u2026"
+        },
+        {
+          "comment_id": 4098653408,
+          "author_login": "sursu",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-20T14:54:24Z",
+          "toxicity_prob": 0.0010099895298480988,
+          "body_preview": "Thank you for taking time to look at this. \nI was hoping this feature would eventually become reliable instead of being removed though :)\n\nDoes pandas have any other elegant way of assigning metadata to columns?"
+        },
+        {
+          "comment_id": 4306204678,
+          "author_login": "joelb123",
+          "author_association": "NONE",
+          "comment_created_at": "2026-04-23T16:48:17Z",
+          "toxicity_prob": 0.0006081081228330731,
+          "body_preview": "I wrote some code to serialize/deserialize global and column metadata in parquet files. I made the choice to not JSON-encode key values, which goes with the practice used in pyarrow at present. I'll file a request with pyarrow to make this easier. It would be good if pandas simplified the behavior of dataframe and column attributes to be just normal dictionaries and read and write this way, enabling metadata consumption by downstream clients other than pandas.\n\nI think stdlib json would also work, but I prefer orjson because of correctness. Timestamps are often valuable metadata.\n\nUnits and de\u2026"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64008",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64008,
+    "url": "https://github.com/pandas-dev/pandas/pull/64008",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 17,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": 12,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9996975660324097,
+      "mean_toxicity_prob": 0.05984882992582724,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3914643915,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-17T13:13:43Z",
+          "toxicity_prob": 0.9996975660324097,
+          "body_preview": "I also forget to add what's new not damn!\ni am little confused because of too much work sorry!"
+        },
+        {
+          "comment_id": 2781836394,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-09T10:29:36Z",
+          "toxicity_prob": 0.003890189342200756,
+          "body_preview": "Yea I know was waiting for mentors to review the PR\nThen I will fix that"
+        },
+        {
+          "comment_id": 3915083326,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-17T14:37:09Z",
+          "toxicity_prob": 0.0036373017355799675,
+          "body_preview": "Sorry for inconvinience!\n i was working on another issue and mistakenly pushed to this branch"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-63444",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63444,
+    "url": "https://github.com/pandas-dev/pandas/issues/63444",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9976644515991211,
+      "mean_toxicity_prob": 0.1552251083614667,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3679051956,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-21T16:18:38Z",
+          "toxicity_prob": 0.9976644515991211,
+          "body_preview": "@rhshadrach Thanks for the explanation I see why allowing it for empty Series would create a weird inconsistency since it fails for non-empty object Series.\nSince the goal is to encourage numeric dtypes, would you like me to work on the PR to just provide a clearer error message instead? Something that specifically suggests using a numeric dtype when a user tries to round an object-dtype Series?\nHappy to work on this !"
+        },
+        {
+          "comment_id": 3679093407,
+          "author_login": "Spikhalskiy",
+          "author_association": "NONE",
+          "comment_created_at": "2025-12-21T17:00:00Z",
+          "toxicity_prob": 0.9975734353065491,
+          "body_preview": "@rhshadrach, I think your response may reflect the bias of someone who uses pandas more often in notebooks/ad-hock/hands-on scenarios than in a production environment. This way of thinking is not helpful for every user.\n\nThis is where it leads a person who uses pandas in production:\n\n1. Now, after discovering this, I need to keep in mind that I need to check Series for emptiness before using pandas operations on them, but ONLY for .round(). \n2. Why only round? Not particularly clear, there is nothing special about .round(). Just because. Maybe not just round. So there is no way to think about \u2026"
+        },
+        {
+          "comment_id": 3679503140,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2025-12-21T21:22:07Z",
+          "toxicity_prob": 0.786475419998169,
+          "body_preview": "> I think your response may reflect the bias of someone who uses pandas more often in notebooks/ad-hock/hands-on scenarios than in a production environment.\n\n@Spikhalskiy I wouldn't just assume that @rhshadrach is not using pandas in production\n\n---\n\nStrictly speaking, this has nothing to do with the fact that it is an empty series, but the fact that the series has `object` dtype. `round()` works fine on empty Series with numeric dtype:\n\n```python\n>>> pd.Series([], dtype=float).round()\nSeries([], dtype: float64)\n```\n\nOf course, I fully understand that the fact that you got `object` dtype is be\u2026"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64449",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64449,
+    "url": "https://github.com/pandas-dev/pandas/pull/64449",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 11,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 7,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9966630339622498,
+      "mean_toxicity_prob": 0.27208015189601364,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4070823083,
+          "author_login": "bgoblyos",
+          "author_association": "NONE",
+          "comment_created_at": "2026-03-16T21:51:54Z",
+          "toxicity_prob": 0.9966630339622498,
+          "body_preview": "> These are two different solutions, no? In my proposal, if you have the float `0.5` the JSON would contain `0.5` and not scientific notation.\n\nThe most compete representation of a float is in scientific notation, that's why they're called floating point after all. I suppose it could be simplified in cases where that's possible (like 5.00e-01 to 0.5), but that's less predictable and I don't think it really matters if it's going to be parsed by a computer. It wouldn't be hard to implement, all it takes is switching the `e` to `g` in the format string, but it makes unit testing harder, does not \u2026"
+        },
+        {
+          "comment_id": 4070876248,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-16T21:58:44Z",
+          "toxicity_prob": 0.9963674545288086,
+          "body_preview": "> It wouldn't be hard to implement, all it takes is switching the `e` to `g` in the format string, but it makes unit testing harder, does not indicate the actual precision (you can't tell if 0.5 is exact or rounded from 0.51), and has some weird edge cases, like omitting the decimal point, leading to the parser interpreting the value as an int on a round-trip.\n\nI'm proposing to add support for `precision=None`. When supplied it would use `repr(value)`, not `f\"{value:g}\"`\n\n```python\nprint(f\"{2.0:g}\", repr(2.0))\n# 2 2.0\n```"
+        },
+        {
+          "comment_id": 4070988037,
+          "author_login": "bgoblyos",
+          "author_association": "NONE",
+          "comment_created_at": "2026-03-16T22:18:50Z",
+          "toxicity_prob": 0.995794415473938,
+          "body_preview": "> > It wouldn't be hard to implement, all it takes is switching the `e` to `g` in the format string, but it makes unit testing harder, does not indicate the actual precision (you can't tell if 0.5 is exact or rounded from 0.51), and has some weird edge cases, like omitting the decimal point, leading to the parser interpreting the value as an int on a round-trip.\n> \n> I'm proposing to add support for `precision=None`. When supplied it would use `repr(value)`, not `f\"{value:g}\"`\n> \n> ```python\n> print(f\"{2.0:g}\", repr(2.0))\n> # 2 2.0\n> ```\n\nOK, I see what you mean. The JSON serializer is written\u2026"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-64198",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64198,
+    "url": "https://github.com/pandas-dev/pandas/issues/64198",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9966450333595276,
+      "mean_toxicity_prob": 0.33253574164700694,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3929957972,
+          "author_login": "arthursn",
+          "author_association": "NONE",
+          "comment_created_at": "2026-02-19T20:55:50Z",
+          "toxicity_prob": 0.9966450333595276,
+          "body_preview": "Thanks for your reply!\n\nI do agree with you that it might indeed break existing behavior. Reintroducing `mangle_dupe_cols` could indeed solve the issue. However, whether intentional or not, I find it weird that the default behavior is to mangle the column names even when they are not duplicated in the subset filtered by `usecols`.\n\nAs a matter of fact, apart from the conversion of excel column names to index numbers (achieved with `maybe_convert_usecols`), in the current form, `usecols` arguably barely adds any functionality. If I would wish to achieve the current behavior, I would use somethi\u2026"
+        },
+        {
+          "comment_id": 3917229289,
+          "author_login": "arthursn",
+          "author_association": "NONE",
+          "comment_created_at": "2026-02-17T21:42:52Z",
+          "toxicity_prob": 0.0005040756659582257,
+          "body_preview": "The issue seems to be rooted in the implementation of `PythonParser::_infer_columns` in `pandas.io.parsers.python_parser`, where the logic of column name deduplication is implemented:\n\nhttps://github.com/pandas-dev/pandas/blob/04a5f9741d754513bbfc26bc2f048ca36bed6725/pandas/io/parsers/python_parser.py#L647-L656\n\nThen the [mangled] `usecols` columns are retrieved later in the same function by `self._handle_usecols(...)`. Notice that because `PythonParser` is also used by other readers, such as `read_csv`, the same problem is reproduced when using them.\n\nFor the case of `read_excel`, the followi\u2026"
+        },
+        {
+          "comment_id": 3924730339,
+          "author_login": "kjmin622",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-19T05:11:23Z",
+          "toxicity_prob": 0.00045811591553501785,
+          "body_preview": "Thanks for the report! I also agree that this behavior could be useful in certain situations.\n\nThat said, changing column names depending on the usecols scope may introduce compatibility risks with existing behavior. It might be worth discussing whether a new parameter should be introduced to explicitly control this. If we do go in that direction, it could also be an opportunity to reconsider a limited reintroduction of `mangle_dupe_cols` in some form. (#13262)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-63991",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63991,
+    "url": "https://github.com/pandas-dev/pandas/issues/63991",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 6,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 5,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9990180730819702,
+      "mean_toxicity_prob": 0.1670556686197718,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3844053721,
+          "author_login": "wjandrea",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-03T22:27:53Z",
+          "toxicity_prob": 0.9990180730819702,
+          "body_preview": "> unless `DataFrameGroupBy` et al were added to the top namespace of pandas\n\nYeah, that would be weird.\n\n> the only reason a user should be using a class like `DataFrameGroupBy` is for type-hinting or isinstance checks\n\nMaybe I wasn't clear. I meant if I do `pd.DataFrame(...).groupby(...).median()`, then I'm using `DataFrameGroupBy` **implicitly** - i.e. without importing it or even naming it, and definitely not instantiating it directly.\n\n> what color would make the bike shed look best\n\nFair enough :) I'll look into the previous discussions and get back to you if I have anything else to add."
+        },
+        {
+          "comment_id": 3843008269,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-03T18:38:48Z",
+          "toxicity_prob": 0.0009603048674762249,
+          "body_preview": "@wjandrea already discussed in issue #63810 \nAnd work in progress #63812"
+        },
+        {
+          "comment_id": 3844072861,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-03T22:30:42Z",
+          "toxicity_prob": 0.0008272454724647105,
+          "body_preview": "@wjandrea - let me know if you don't agree that #55632 is essentially the same as this issue and can reopen."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63877",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63877,
+    "url": "https://github.com/pandas-dev/pandas/pull/63877",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 24,
+      "unique_commenter_count": 6,
+      "first_toxic_comment_index": 23,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.991538941860199,
+      "mean_toxicity_prob": 0.04203996510720268,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2730828232,
+          "author_login": "flying-sheep",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-27T08:26:55Z",
+          "toxicity_prob": 0.991538941860199,
+          "body_preview": "I saw this as a clumsy attempt to get something almost like `.. module:: pandas.api.typing.aliases`.\n\nI think it would be confusing if one can use both `` :ref:`api.typing.aliases` `` and the properly formatted `` :mod:`pandas.api.typing.aliases` ``"
+        },
+        {
+          "comment_id": 3806951589,
+          "author_login": "solusops",
+          "author_association": "NONE",
+          "comment_created_at": "2026-01-27T18:58:43Z",
+          "toxicity_prob": 0.0038702012971043587,
+          "body_preview": "@flying-sheep I do not understand why this was closed?\nIssue is still open and I think you got positive review from maintainers!\nEdit: Oh the other one was selected to go ahead."
+        },
+        {
+          "comment_id": 3798904185,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-26T10:34:18Z",
+          "toxicity_prob": 0.0011052723275497556,
+          "body_preview": "Hey @flying-sheep, I took a look at this. The raw HTML block is neat for the web, but it\u2019s going to break the PDF/LaTeX build since that ignores HTML. The full module paths will show up there and likely blow up the table width in the printed docs.\n\nAlso, a lot of the links like :meth:agg and :meth:dropna are still broken because they need the full path (e.g. ~pandas.DataFrame.agg) to resolve correctly with the current module set to aliases. I think sticking to the standard backticks is safer to keep the docs consistent across formats."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64556",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64556,
+    "url": "https://github.com/pandas-dev/pandas/pull/64556",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 12,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9947562217712402,
+      "mean_toxicity_prob": 0.08357548943846875,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2925709342,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-12T16:01:55Z",
+          "toxicity_prob": 0.9947562217712402,
+          "body_preview": "That is a bizarre failure? Because DatetimeIndex definitely has those attributes"
+        },
+        {
+          "comment_id": 4087727130,
+          "author_login": "tuhinsharma121",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-19T04:22:58Z",
+          "toxicity_prob": 0.0026814702432602644,
+          "body_preview": "@jbrockmendel @jorisvandenbossche should be good to go?"
+        },
+        {
+          "comment_id": 2923104811,
+          "author_login": "tuhinsharma121",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-12T08:44:47Z",
+          "toxicity_prob": 0.0007128773140721023,
+          "body_preview": "@jorisvandenbossche The CI is throwing the mypy error for date_index.year and date_index.month\n\n```\nmypy.....................................................................Failed\n- hook id: mypy\n- duration: 106.18s\n- exit code: 1\n\npandas/io/stata.py:286: error: \"DatetimeIndex\" has no attribute \"year\"  [attr-defined]\npandas/io/stata.py:287: error: \"DatetimeIndex\" has no attribute \"month\"  [attr-defined]\nFound 2 errors in 1 file (checked 1456 source files)\n\nmypy (stubtest)..........................................................Failed\n- hook id: stubtest\n- duration: 68.27s\n- exit code: 1\n```\n\n\u2026"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-64266",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64266,
+    "url": "https://github.com/pandas-dev/pandas/issues/64266",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": 2,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9989193677902222,
+      "mean_toxicity_prob": 0.33329718575502437,
+      "stratum": "clearly_toxic_candidate",
+      "classifier_stratum": "clearly_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3945929556,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-23T16:44:06Z",
+          "toxicity_prob": 0.9989193677902222,
+          "body_preview": "This would be ugly, but could we make `ser.loc[idx]` round-trip by patching Float32Engine to cast a python float to the nearest float32?"
+        },
+        {
+          "comment_id": 3939255108,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-21T18:59:39Z",
+          "toxicity_prob": 0.0005064295255579054,
+          "body_preview": "For most of the ones I feel uncertain about, it is mostly because they are returning an index label. I worry that if we convert to a Python scalar here, then code like this:\n\n```python\nser = pd.Series(...)\nidx = ser.index.max()\nser.loc[idx]\n```\n\nmight raise because roundtripping through Python scalars is lossy. I attempted to do this with the index of `ser` being `float32` but this seems to be okay.\n\n```python\nimport random\nimport numpy as np\nimport pandas as pd\n\npd.set_option(\"python_scalars\", True)\nfor _ in range(10000):\n    ser = pd.Series([\"a\"], index=pd.Index([random.random()], dtype=\"flo\u2026"
+        },
+        {
+          "comment_id": 3947390926,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-23T21:19:57Z",
+          "toxicity_prob": 0.0004657599492929876,
+          "body_preview": "As far as I can tell, it's not needed. My code sample above doesn't raise. But I don't feel confident this is always the case with all indexes."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63783",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63783,
+    "url": "https://github.com/pandas-dev/pandas/pull/63783",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 9,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.6736798882484436,
+      "mean_toxicity_prob": 0.0755253644246194,
+      "stratum": "borderline_candidate",
+      "classifier_stratum": "borderline_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3848792257,
+          "author_login": "ngoldbaum",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-04T17:34:01Z",
+          "toxicity_prob": 0.6736798882484436,
+          "body_preview": "Well that's annoying: The Windows Python 3.12 tests failed inside the new multithreaded test with a spurious warning:\n\nhttps://github.com/pandas-dev/pandas/actions/runs/21448817886/job/61771847840?pr=63783#step:5:335\n\nWarnings are known not to be thread-safe before Python 3.14, so I'm tempted to just skip the new multithreaded tests on Python versions where warnings aren't thread-safe. @mroeschke does that seem OK to you?"
+        },
+        {
+          "comment_id": 3867108305,
+          "author_login": "kumaraditya303",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-08T12:42:06Z",
+          "toxicity_prob": 0.0011813286691904068,
+          "body_preview": "@mroeschke This is ready to merged, we will followup to add a TSAN CI job once this gets merged."
+        },
+        {
+          "comment_id": 3848372690,
+          "author_login": "ngoldbaum",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-04T16:13:16Z",
+          "toxicity_prob": 0.0008831434533931315,
+          "body_preview": "I edited the description to make it more descriptive - sorry for forgetting to do that before marking it ready for review!"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63725",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63725,
+    "url": "https://github.com/pandas-dev/pandas/pull/63725",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 28,
+      "unique_commenter_count": 5,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0016374150291085243,
+      "mean_toxicity_prob": 0.0005631509525950865,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3770438824,
+          "author_login": "Mazen050",
+          "author_association": "NONE",
+          "comment_created_at": "2026-01-19T23:32:18Z",
+          "toxicity_prob": 0.0016374150291085243,
+          "body_preview": "@Alvaro-Kothe Thanks I will check it out."
+        },
+        {
+          "comment_id": 3812896086,
+          "author_login": "mroeschke",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-01-28T17:56:23Z",
+          "toxicity_prob": 0.000734172179363668,
+          "body_preview": "Agreed with @rhshadrach's assessment - I don't think it's worth adding `orjson` if it doesn't meet all the feature parity of the existing `ujson` engine.\n\nAlso, is the pyarrow engine able to read json with large integers as described in the original issue?"
+        },
+        {
+          "comment_id": 3817693260,
+          "author_login": "Mazen050",
+          "author_association": "NONE",
+          "comment_created_at": "2026-01-29T13:27:17Z",
+          "toxicity_prob": 0.0006973309209570289,
+          "body_preview": "> Agreed with @rhshadrach's assessment - I don't think it's worth adding `orjson` if it doesn't meet all the feature parity of the existing `ujson` engine.\n\nThat is fair considering it might break a lot of existing code.\n\n> Also, is the pyarrow engine able to read json with large integers as described in the original issue?\n\nYes the pyarrow engine is able to read large integers\n\nAlso, If nothing else is required here, I\u2019m fine with closing this PR."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-64074",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64074,
+    "url": "https://github.com/pandas-dev/pandas/issues/64074",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "unique_commenter_count": 5,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0011865276610478759,
+      "mean_toxicity_prob": 0.0006550455853963892,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3869658706,
+          "author_login": "vkverma9534",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-09T06:35:44Z",
+          "toxicity_prob": 0.0011865276610478759,
+          "body_preview": "@rhshadrach i made numeric imputation as default and no default for window also default of weight is a matter of debate but all this accounts for how i think the enhancement should look like"
+        },
+        {
+          "comment_id": 3876005188,
+          "author_login": "vkverma9534",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-10T08:04:56Z",
+          "toxicity_prob": 0.0009582483908161521,
+          "body_preview": "That's fine! Thanks for showing interest \ud83d\udc4d"
+        },
+        {
+          "comment_id": 3875930662,
+          "author_login": "kjmin622",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-10T07:45:11Z",
+          "toxicity_prob": 0.0008848431752994657,
+          "body_preview": "@vkverma9534 Thanks for the clarification! Sorry for jumping ahead\u2014I thought the discussion had concluded and opened \nthis PR prematurely. I'll close this PR."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64040",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64040,
+    "url": "https://github.com/pandas-dev/pandas/pull/64040",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 32,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.006365020759403706,
+      "mean_toxicity_prob": 0.0010918562884398852,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3940964103,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-22T13:35:57Z",
+          "toxicity_prob": 0.006365020759403706,
+          "body_preview": "@jorisvandenbossche Its been couple of days its ready for review!\nNever mind if you are busy!"
+        },
+        {
+          "comment_id": 3979113125,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-01T05:04:29Z",
+          "toxicity_prob": 0.005637747701257467,
+          "body_preview": "@jorisvandenbossche is this looking good?"
+        },
+        {
+          "comment_id": 3920979816,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-18T13:57:57Z",
+          "toxicity_prob": 0.0020074942149221897,
+          "body_preview": "By the way @jorisvandenbossche\nare we participating in gsoc this year ? \nAny project idea which is good for pandas and should be in gsoc? Let me know!\nI am so willing to contribute for pandas in that reputable environment \n\nShould I post project idea proposal for pandas when registration portal opens for gsoc?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63773",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63773,
+    "url": "https://github.com/pandas-dev/pandas/pull/63773",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 19,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.01500493474304676,
+      "mean_toxicity_prob": 0.0020747188307148846,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3137247698,
+          "author_login": "randolf-scholz",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-04-24T11:02:42Z",
+          "toxicity_prob": 0.01500493474304676,
+          "body_preview": "yes, what a silly slip-up"
+        },
+        {
+          "comment_id": 3137363843,
+          "author_login": "randolf-scholz",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-04-24T11:26:11Z",
+          "toxicity_prob": 0.007007888983935118,
+          "body_preview": "I let CODEX do the refactor to plain tuples."
+        },
+        {
+          "comment_id": 3134966605,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-24T01:37:56Z",
+          "toxicity_prob": 0.0024129198864102364,
+          "body_preview": "this isnt a pattern we use anywhere else.  wouldnt a tuple or a dict work fine for these?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63808",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63808,
+    "url": "https://github.com/pandas-dev/pandas/pull/63808",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 19,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.002164734760299325,
+      "mean_toxicity_prob": 0.0007017000201525853,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3796271014,
+          "author_login": "vishwas-droid",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-25T09:30:52Z",
+          "toxicity_prob": 0.002164734760299325,
+          "body_preview": "cc @jorisvandenbossche @mroeschke @rhshadrach   \u2014 just a small ping on this, thanks!"
+        },
+        {
+          "comment_id": 3825508162,
+          "author_login": "vishwas-droid",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-30T20:06:03Z",
+          "toxicity_prob": 0.001355119631625712,
+          "body_preview": "@rhshadrach All feedback addressed. Ready to proceed from my side.\nThanks!"
+        },
+        {
+          "comment_id": 3825669775,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-01-30T20:48:18Z",
+          "toxicity_prob": 0.0009367641760036349,
+          "body_preview": "Thanks @vishwas-droid - closing."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63466",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63466,
+    "url": "https://github.com/pandas-dev/pandas/pull/63466",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.004137310665100813,
+      "mean_toxicity_prob": 0.0012385461628178342,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3692978483,
+          "author_login": "Antriksh006",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-26T14:59:08Z",
+          "toxicity_prob": 0.004137310665100813,
+          "body_preview": "Hi @rhshadrach, waiting for a review from your side"
+        },
+        {
+          "comment_id": 2649151547,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2025-12-27T13:59:12Z",
+          "toxicity_prob": 0.0038775489665567875,
+          "body_preview": "Why does this need to change?"
+        },
+        {
+          "comment_id": 2654879741,
+          "author_login": "Antriksh006",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-31T06:25:55Z",
+          "toxicity_prob": 0.0024097850546240807,
+          "body_preview": "@rhshadrach"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-issue-64588",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64588,
+    "url": "https://github.com/pandas-dev/pandas/issues/64588",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.011119868606328964,
+      "mean_toxicity_prob": 0.003257108270190656,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4208911851,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-04-08T19:09:30Z",
+          "toxicity_prob": 0.011119868606328964,
+          "body_preview": "@shyamhari1074 Just wait 3 more days I will review, I am little busy!"
+        },
+        {
+          "comment_id": 4061209957,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-14T19:30:56Z",
+          "toxicity_prob": 0.011012780480086803,
+          "body_preview": "@rhshadrach and that's why I strict with that new contributors, they even using AI in conversation with us \n@shyamhari1074 Please not use AI when talking to us use your own human tone and understanding while discussing approach for the issue"
+        },
+        {
+          "comment_id": 4119254201,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-24T15:35:57Z",
+          "toxicity_prob": 0.00663990480825305,
+          "body_preview": "@shyamhari1074 I am little busy you can work on it! Then i will review!"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64366",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64366,
+    "url": "https://github.com/pandas-dev/pandas/pull/64366",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 35,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.002002475317567587,
+      "mean_toxicity_prob": 0.0006359096724606519,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4057837810,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-13T20:33:03Z",
+          "toxicity_prob": 0.002002475317567587,
+          "body_preview": "Thanks @Alvaro-Kothe"
+        },
+        {
+          "comment_id": 4056919228,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-13T17:51:43Z",
+          "toxicity_prob": 0.001517747761681676,
+          "body_preview": "Handful of small things, nothing big"
+        },
+        {
+          "comment_id": 2885359929,
+          "author_login": "mroeschke",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-04T18:22:15Z",
+          "toxicity_prob": 0.0011037818621844053,
+          "body_preview": "Any reason you defined these in the pxd instead of the pyx?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64513",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64513,
+    "url": "https://github.com/pandas-dev/pandas/pull/64513",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.011466911993920803,
+      "mean_toxicity_prob": 0.0013472032296704128,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2994626788,
+          "author_login": "WillAyd",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-26T12:44:06Z",
+          "toxicity_prob": 0.011466911993920803,
+          "body_preview": "Are these sentinels stored somewhere else? Feels a bit hacky to state them here like this"
+        },
+        {
+          "comment_id": 4136562141,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-26T16:50:07Z",
+          "toxicity_prob": 0.0021416405215859413,
+          "body_preview": "Updated, instruction to claude was \"He's still not happy. Can you look at his most recent comment and, to the extent possible, do it his way\""
+        },
+        {
+          "comment_id": 4172549922,
+          "author_login": "WillAyd",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-01T19:42:50Z",
+          "toxicity_prob": 0.0012636538594961166,
+          "body_preview": "Thanks @jbrockmendel"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64664",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64664,
+    "url": "https://github.com/pandas-dev/pandas/pull/64664",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 28,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.002943112049251795,
+      "mean_toxicity_prob": 0.0006906077136851049,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2962103486,
+          "author_login": "eicchen",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-19T18:58:22Z",
+          "toxicity_prob": 0.002943112049251795,
+          "body_preview": "On it, thanks Joris!"
+        },
+        {
+          "comment_id": 3980954583,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-20T11:31:54Z",
+          "toxicity_prob": 0.0010467126267030835,
+          "body_preview": "Looking good!"
+        },
+        {
+          "comment_id": 4155694327,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-30T14:55:05Z",
+          "toxicity_prob": 0.0010115476325154305,
+          "body_preview": "@eicchen thanks for the PR!"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64562",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64562,
+    "url": "https://github.com/pandas-dev/pandas/pull/64562",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 29,
+      "unique_commenter_count": 5,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0037197857163846493,
+      "mean_toxicity_prob": 0.0010479323130406055,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4085048180,
+          "author_login": "tuhinsharma121",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-03-18T19:22:31Z",
+          "toxicity_prob": 0.0037197857163846493,
+          "body_preview": "@mroeschke @jbrockmendel  Are we good to go with this?"
+        },
+        {
+          "comment_id": 2947948760,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-17T16:13:33Z",
+          "toxicity_prob": 0.0034937001764774323,
+          "body_preview": "do we have a decorator for this?  Or just inline them?"
+        },
+        {
+          "comment_id": 4076567633,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-17T17:05:13Z",
+          "toxicity_prob": 0.0023254689294844866,
+          "body_preview": "i think it was @mroeschke who wanted to get rid of the decorators in favor of inlining, will see if he has opinions about this pinning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63969",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63969,
+    "url": "https://github.com/pandas-dev/pandas/pull/63969",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0035371347330510616,
+      "mean_toxicity_prob": 0.0007726141888674141,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4200043914,
+          "author_login": "Hofer-Julian",
+          "author_association": "NONE",
+          "comment_created_at": "2026-04-07T15:09:31Z",
+          "toxicity_prob": 0.0035371347330510616,
+          "body_preview": "Hey @jorisvandenbossche and @mroeschke!\n\nI just found out about your work to migrate from conda/mamba to Pixi and us Pixi maintainers would be happy to help you out if you encounter issues.\n\nLooking at your pixi.toml, I am also confident that [Pixi Build](https://pixi.prefix.dev/latest/build/getting_started/) will make your use case even smoother!\n\nWith SciPy folks we also have our own discord channel on our server, we can make one for you as well if you'd be interested in that."
+        },
+        {
+          "comment_id": 4201180202,
+          "author_login": "mroeschke",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-07T18:03:21Z",
+          "toxicity_prob": 0.0009085944038815796,
+          "body_preview": "Thanks for reaching out!\n\n> Looking at your pixi.toml, I am also confident that [Pixi Build](https://pixi.prefix.dev/latest/build/getting_started/) will make your use case even smoother!\n\nYes, that's one of the goals we have on our [migration tasks](https://github.com/pandas-dev/pandas/issues/64847) (we currently create environments with build and runtime dependencies and then `pip install` pandas wheels built from source w/ Meson back into the environment which feels a little anti-pattern for Pixi) \n\n> With SciPy folks we also have our own discord channel on our server, we can make one for yo\u2026"
+        },
+        {
+          "comment_id": 4088589193,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-19T08:32:04Z",
+          "toxicity_prob": 0.0008805907564237714,
+          "body_preview": "@mroeschke could you maybe open an issue tracking the further todo items related to this (i.e. some things you mentioned in the top post here: other workflows, updating some scripts, also adding a lockfile, etc)"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63831",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63831,
+    "url": "https://github.com/pandas-dev/pandas/pull/63831",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 36,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0033603101037442684,
+      "mean_toxicity_prob": 0.0008045314162801434,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3062630703,
+          "author_login": "Sharl0tteIsTaken",
+          "author_association": "NONE",
+          "comment_created_at": "2026-04-10T06:45:53Z",
+          "toxicity_prob": 0.0033603101037442684,
+          "body_preview": "Do you meant other git branches? Can you give an example if so?"
+        },
+        {
+          "comment_id": 4217791989,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-09T21:48:13Z",
+          "toxicity_prob": 0.002989033702760935,
+          "body_preview": "Closing as stale. can reopen when youre ready to address comments"
+        },
+        {
+          "comment_id": 3065380503,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-04-10T16:01:30Z",
+          "toxicity_prob": 0.0022862269543111324,
+          "body_preview": "I don't have the bandwidth to walk you through this. I need you to figure this out for yourself."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64212",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64212,
+    "url": "https://github.com/pandas-dev/pandas/pull/64212",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 20,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0032411569263786077,
+      "mean_toxicity_prob": 0.0013143287593265995,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2833906537,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-20T15:57:26Z",
+          "toxicity_prob": 0.0032411569263786077,
+          "body_preview": "Pandas4Warning"
+        },
+        {
+          "comment_id": 2834292386,
+          "author_login": "bittoby",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-20T17:23:43Z",
+          "toxicity_prob": 0.0027402329724282026,
+          "body_preview": "@jbrockmendel I am sorry that I can't catch the correct meaning of your comment. Shall I implement Pandas4Wanring or give information about pandas 4. I am afraid that I am misunderstanding. Please give me more details."
+        },
+        {
+          "comment_id": 3920585145,
+          "author_login": "bittoby",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-18T12:33:43Z",
+          "toxicity_prob": 0.0026113768108189106,
+          "body_preview": "Hi @jbrockmendel  I think we should correct all the cases which use name in the whole pandas. What do you think about it?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64233",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64233,
+    "url": "https://github.com/pandas-dev/pandas/pull/64233",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 17,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0038066778797656298,
+      "mean_toxicity_prob": 0.0013505563787047697,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3962172058,
+          "author_login": "bittoby",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-25T21:23:30Z",
+          "toxicity_prob": 0.0038066778797656298,
+          "body_preview": "@rhshadrach Sorry for ping you again. could you please review again? \ud83d\ude4f"
+        },
+        {
+          "comment_id": 2838142879,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-22T15:41:18Z",
+          "toxicity_prob": 0.003415530314669013,
+          "body_preview": "What is the point of catching these errors just to raise again?"
+        },
+        {
+          "comment_id": 3930770231,
+          "author_login": "bittoby",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-19T23:47:59Z",
+          "toxicity_prob": 0.0021468072663992643,
+          "body_preview": "@rhshadrach Please review my PR. Thanks."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64306",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64306,
+    "url": "https://github.com/pandas-dev/pandas/pull/64306",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 29,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.002300953259691596,
+      "mean_toxicity_prob": 0.0008227156810382189,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2897952373,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-06T21:28:32Z",
+          "toxicity_prob": 0.002300953259691596,
+          "body_preview": "can this be cimport?  might need to cdef Day?"
+        },
+        {
+          "comment_id": 2897955969,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-06T21:29:38Z",
+          "toxicity_prob": 0.0015317846555262804,
+          "body_preview": "i suspect that handling this in the Timedelta constructor will mean you don't ened to handle it here"
+        },
+        {
+          "comment_id": 2956051331,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-18T20:29:44Z",
+          "toxicity_prob": 0.0014312411658465862,
+          "body_preview": "is this used?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-63463",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63463,
+    "url": "https://github.com/pandas-dev/pandas/pull/63463",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 40,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.008012194186449051,
+      "mean_toxicity_prob": 0.0014372770783666056,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3703951468,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-01T18:00:47Z",
+          "toxicity_prob": 0.008012194186449051,
+          "body_preview": "@rhshadrach sorry for inconvinience \n can you clarify that unresolved request means"
+        },
+        {
+          "comment_id": 3703738145,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-01-01T14:08:02Z",
+          "toxicity_prob": 0.007825764827430248,
+          "body_preview": "@rhshadrach is this alright now ?"
+        },
+        {
+          "comment_id": 2656453867,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-01-01T15:57:54Z",
+          "toxicity_prob": 0.007109947502613068,
+          "body_preview": "Why are these being removed?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64291",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64291,
+    "url": "https://github.com/pandas-dev/pandas/pull/64291",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.003883443307131529,
+      "mean_toxicity_prob": 0.0011333384124251704,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4097665198,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-20T12:26:27Z",
+          "toxicity_prob": 0.003883443307131529,
+          "body_preview": "Thanks for the ping @sankerathul - there is a conflict that needs to be resolved."
+        },
+        {
+          "comment_id": 4161909088,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-31T11:21:01Z",
+          "toxicity_prob": 0.00300398888066411,
+          "body_preview": "@sankerathul thanks for the PR!"
+        },
+        {
+          "comment_id": 2856625250,
+          "author_login": "sankerathul",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-26T02:59:24Z",
+          "toxicity_prob": 0.002293236553668976,
+          "body_preview": "thank @rhshadrach. I\u2019ll look into it. Also what\u2019s the recommended way to test the workflow? Running it in my forked repo keeps failing, are there other options?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64451",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64451,
+    "url": "https://github.com/pandas-dev/pandas/pull/64451",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 16,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.004031011369079351,
+      "mean_toxicity_prob": 0.0010012041093432344,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 4016724072,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-07T15:38:23Z",
+          "toxicity_prob": 0.004031011369079351,
+          "body_preview": "I'm fine with that.  Personally I'd go further and put all of those on the base class making SupportsAnyAll unnecessary."
+        },
+        {
+          "comment_id": 2900645130,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-07T21:52:42Z",
+          "toxicity_prob": 0.0017347364919260144,
+          "body_preview": "Don\u2019t need to hash that out here"
+        },
+        {
+          "comment_id": 4025393126,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-09T17:13:06Z",
+          "toxicity_prob": 0.0016920657362788916,
+          "body_preview": "thanks @rhshadrach"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64251",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64251,
+    "url": "https://github.com/pandas-dev/pandas/pull/64251",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "unique_commenter_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.004538959823548794,
+      "mean_toxicity_prob": 0.000998397729644138,
+      "stratum": "heated_not_toxic_candidate",
+      "classifier_stratum": "heated_not_toxic_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 2835461355,
+          "author_login": "rhshadrach",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-02-20T23:19:56Z",
+          "toxicity_prob": 0.004538959823548794,
+          "body_preview": "Can you do this without a try-except? Fallbacks like this are very likely to hide bugs."
+        },
+        {
+          "comment_id": 2948677912,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-17T18:13:00Z",
+          "toxicity_prob": 0.00353629095479846,
+          "body_preview": "i dont think we need new asvs for this"
+        },
+        {
+          "comment_id": 2948677017,
+          "author_login": "jbrockmendel",
+          "author_association": "MEMBER",
+          "comment_created_at": "2026-03-17T18:12:50Z",
+          "toxicity_prob": 0.0010128272697329521,
+          "body_preview": "do we not already have tests that go down the relevant paths?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64626",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64626,
+    "url": "https://github.com/pandas-dev/pandas/pull/64626",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 0,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-issue-63774",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63774,
+    "url": "https://github.com/pandas-dev/pandas/issues/63774",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 0,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-65323",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65323,
+    "url": "https://github.com/pandas-dev/pandas/pull/65323",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 0,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-64658",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64658,
+    "url": "https://github.com/pandas-dev/pandas/pull/64658",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-64685",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64685,
+    "url": "https://github.com/pandas-dev/pandas/pull/64685",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-65283",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65283,
+    "url": "https://github.com/pandas-dev/pandas/pull/65283",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 0,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-issue-65118",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 65118,
+    "url": "https://github.com/pandas-dev/pandas/issues/65118",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 0,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-63647",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63647,
+    "url": "https://github.com/pandas-dev/pandas/pull/63647",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-63951",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63951,
+    "url": "https://github.com/pandas-dev/pandas/pull/63951",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-issue-64012",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64012,
+    "url": "https://github.com/pandas-dev/pandas/issues/64012",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 4,
+      "unique_commenter_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.000587347021792084,
+      "mean_toxicity_prob": 0.0005206300265854225,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3845113211,
+          "author_login": "kishgi",
+          "author_association": "NONE",
+          "comment_created_at": "2026-02-04T04:00:22Z",
+          "toxicity_prob": 0.000587347021792084,
+          "body_preview": "Hey, I would like to work on this Issue"
+        },
+        {
+          "comment_id": 3897290780,
+          "author_login": "Mr-Neutr0n",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-13T13:36:04Z",
+          "toxicity_prob": 0.0005211291136220098,
+          "body_preview": "Opened a PR to address this: #64132\n\nRather than silently ignoring `unit`, it now raises a `ValueError` when datetime-like input is passed with `unit`, pointing users to `.as_unit()` for resolution conversion."
+        },
+        {
+          "comment_id": 3848464487,
+          "author_login": "sanrishi",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2026-02-04T16:30:38Z",
+          "toxicity_prob": 0.0005099038826301694,
+          "body_preview": "@jorisvandenbossche I can pick this up. I'll open a PR to update the to_datetime docstring to clarify that unit is intended for scalar/epoch conversion and generally ignored when passing a DatetimeIndex (where .as_unit() should be used instead)."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64743",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64743,
+    "url": "https://github.com/pandas-dev/pandas/pull/64743",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-issue-64297",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64297,
+    "url": "https://github.com/pandas-dev/pandas/issues/64297",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-63409",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63409,
+    "url": "https://github.com/pandas-dev/pandas/pull/63409",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 4,
+      "unique_commenter_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.00051680370233953,
+      "mean_toxicity_prob": 0.000501612237712834,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": [
+        {
+          "comment_id": 3683231337,
+          "author_login": "jorisvandenbossche",
+          "author_association": "MEMBER",
+          "comment_created_at": "2025-12-22T18:02:21Z",
+          "toxicity_prob": 0.00051680370233953,
+          "body_preview": "@vkverma9534 does this fix a specific issue? Or otherwise can you show an example code snippet that illustrates the current bug?\n\nIn any case, a bug fix would also require adding a test to verify that it is fixed now."
+        },
+        {
+          "comment_id": 3684882902,
+          "author_login": "vkverma9534",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-23T03:01:13Z",
+          "toxicity_prob": 0.0005032190238125622,
+          "body_preview": "Thanks for the follow-up.\n\nAfter rechecking the call paths, I realized my confusion came from overlooking the axis involved. The default_index(len(objs)) branch applies to Series concatenation on the items/columns axis (axis=1), where the length should indeed be the number of input objects.\n\nMy confusion was compounded because the _get_concat_axis_dataframe function just below uses a sum(len(...)) pattern, and I incorrectly assumed the same axis semantics here. I missed that distinction.\n\nSorry for the confusion, and sorry for the noise \u2014 thanks for your patience."
+        },
+        {
+          "comment_id": 3674560412,
+          "author_login": "vkverma9534",
+          "author_association": "CONTRIBUTOR",
+          "comment_created_at": "2025-12-19T10:42:20Z",
+          "toxicity_prob": 0.0004986118874512613,
+          "body_preview": "The goal here is to align ignore_index=True with the total concatenated length.\nCI is still failing, and it\u2019s possible the added logic here is contributing to that. I\u2019m happy to simplify or adjust this if there\u2019s a better approach that fits the existing structure. Feedback welcome."
+        }
+      ]
+    }
+  },
+  {
+    "id": "pandas-pr-64734",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64734,
+    "url": "https://github.com/pandas-dev/pandas/pull/64734",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-64178",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64178,
+    "url": "https://github.com/pandas-dev/pandas/pull/64178",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-63898",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63898,
+    "url": "https://github.com/pandas-dev/pandas/pull/63898",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-65371",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65371,
+    "url": "https://github.com/pandas-dev/pandas/pull/65371",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 0,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-63908",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63908,
+    "url": "https://github.com/pandas-dev/pandas/pull/63908",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-63452",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63452,
+    "url": "https://github.com/pandas-dev/pandas/pull/63452",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  },
+  {
+    "id": "pandas-pr-64161",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64161,
+    "url": "https://github.com/pandas-dev/pandas/pull/64161",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "unique_commenter_count": 0,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0,
+      "mean_toxicity_prob": 0.0,
+      "stratum": "control_candidate",
+      "classifier_stratum": "control_candidate",
+      "active_lock_reason": null
+    },
+    "_review": {
+      "suspect_comments": []
+    }
+  }
+]

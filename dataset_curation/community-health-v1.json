@@ -1,0 +1,1366 @@
+[
+  {
+    "id": "pandas-pr-63613",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63613,
+    "url": "https://github.com/pandas-dev/pandas/pull/63613",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 17,
+      "first_toxic_comment_index": 7,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9950174689292908,
+      "mean_toxicity_prob": 0.05917410150184022,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64422",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64422,
+    "url": "https://github.com/pandas-dev/pandas/pull/64422",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 13,
+      "first_toxic_comment_index": 1,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9993934631347656,
+      "mean_toxicity_prob": 0.0775105043206937,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-63444",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63444,
+    "url": "https://github.com/pandas-dev/pandas/issues/63444",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9976644515991211,
+      "mean_toxicity_prob": 0.1552251083614667,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-65127",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65127,
+    "url": "https://github.com/pandas-dev/pandas/pull/65127",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 26,
+      "first_toxic_comment_index": 15,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9977846741676331,
+      "mean_toxicity_prob": 0.03916636158940561,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63915",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63915,
+    "url": "https://github.com/pandas-dev/pandas/pull/63915",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 90,
+      "first_toxic_comment_index": 23,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9995629191398621,
+      "mean_toxicity_prob": 0.011925912440508708,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63666",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63666,
+    "url": "https://github.com/pandas-dev/pandas/pull/63666",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 4,
+      "first_toxic_comment_index": 2,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9980950951576233,
+      "mean_toxicity_prob": 0.25002410761953797,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64013",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64013,
+    "url": "https://github.com/pandas-dev/pandas/pull/64013",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": 14,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9958076477050781,
+      "mean_toxicity_prob": 0.06707861125663234,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-63991",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63991,
+    "url": "https://github.com/pandas-dev/pandas/issues/63991",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 6,
+      "first_toxic_comment_index": 5,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9990180730819702,
+      "mean_toxicity_prob": 0.16705566844514882,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64996",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64996,
+    "url": "https://github.com/pandas-dev/pandas/pull/64996",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 23,
+      "first_toxic_comment_index": 1,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9787801504135132,
+      "mean_toxicity_prob": 0.05516091271040394,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63446",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63446,
+    "url": "https://github.com/pandas-dev/pandas/pull/63446",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 4,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9965083003044128,
+      "mean_toxicity_prob": 0.2557092124770861,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-64198",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64198,
+    "url": "https://github.com/pandas-dev/pandas/issues/64198",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9966450333595276,
+      "mean_toxicity_prob": 0.33253574164700694,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64008",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64008,
+    "url": "https://github.com/pandas-dev/pandas/pull/64008",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 17,
+      "first_toxic_comment_index": 12,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9996975660324097,
+      "mean_toxicity_prob": 0.05984882992582724,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64365",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64365,
+    "url": "https://github.com/pandas-dev/pandas/pull/64365",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 8,
+      "first_toxic_comment_index": 2,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9956532716751099,
+      "mean_toxicity_prob": 0.12589862711320166,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-64266",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64266,
+    "url": "https://github.com/pandas-dev/pandas/issues/64266",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": 2,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9989193677902222,
+      "mean_toxicity_prob": 0.33329718575502437,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-64711",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64711,
+    "url": "https://github.com/pandas-dev/pandas/issues/64711",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 5,
+      "first_toxic_comment_index": 4,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9945324659347534,
+      "mean_toxicity_prob": 0.1994267358793877,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64556",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64556,
+    "url": "https://github.com/pandas-dev/pandas/pull/64556",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 12,
+      "first_toxic_comment_index": 3,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9947562217712402,
+      "mean_toxicity_prob": 0.08357548938026109,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64449",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64449,
+    "url": "https://github.com/pandas-dev/pandas/pull/64449",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 11,
+      "first_toxic_comment_index": 7,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9966630339622498,
+      "mean_toxicity_prob": 0.27208015189601364,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64695",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64695,
+    "url": "https://github.com/pandas-dev/pandas/pull/64695",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 8,
+      "first_toxic_comment_index": 1,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.7731671333312988,
+      "mean_toxicity_prob": 0.0972300751163857,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64453",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64453,
+    "url": "https://github.com/pandas-dev/pandas/pull/64453",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": 1,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9994975328445435,
+      "mean_toxicity_prob": 0.33401305760101724,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-65360",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65360,
+    "url": "https://github.com/pandas-dev/pandas/pull/65360",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 8,
+      "first_toxic_comment_index": 4,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.9959226846694946,
+      "mean_toxicity_prob": 0.12497892267492716,
+      "stratum": "clearly_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63996",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63996,
+    "url": "https://github.com/pandas-dev/pandas/pull/63996",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.693406343460083,
+      "mean_toxicity_prob": 0.6395318806171417,
+      "stratum": "borderline_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63783",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63783,
+    "url": "https://github.com/pandas-dev/pandas/pull/63783",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 9,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.6736798882484436,
+      "mean_toxicity_prob": 0.0755253644246194,
+      "stratum": "borderline_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63925",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63925,
+    "url": "https://github.com/pandas-dev/pandas/pull/63925",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 24,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.001916592358611524,
+      "mean_toxicity_prob": 0.0007605461081160078,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64515",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64515,
+    "url": "https://github.com/pandas-dev/pandas/pull/64515",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 24,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.004213718697428703,
+      "mean_toxicity_prob": 0.0008151598376571201,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64689",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64689,
+    "url": "https://github.com/pandas-dev/pandas/pull/64689",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 19,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0014931925106793642,
+      "mean_toxicity_prob": 0.0006739995472966448,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63782",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63782,
+    "url": "https://github.com/pandas-dev/pandas/pull/63782",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.009506246075034142,
+      "mean_toxicity_prob": 0.0011794962745625525,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64582",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64582,
+    "url": "https://github.com/pandas-dev/pandas/pull/64582",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 25,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0043073976412415504,
+      "mean_toxicity_prob": 0.0007417347980663181,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63395",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63395,
+    "url": "https://github.com/pandas-dev/pandas/pull/63395",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 21,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0015759164234623313,
+      "mean_toxicity_prob": 0.0006598801590457914,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63887",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63887,
+    "url": "https://github.com/pandas-dev/pandas/pull/63887",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 21,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.003076520748436451,
+      "mean_toxicity_prob": 0.0009400359232954326,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64988",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64988,
+    "url": "https://github.com/pandas-dev/pandas/pull/64988",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0029360807966440916,
+      "mean_toxicity_prob": 0.0006952156506789227,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-64074",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64074,
+    "url": "https://github.com/pandas-dev/pandas/issues/64074",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0011865276610478759,
+      "mean_toxicity_prob": 0.0006550456047989428,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64285",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64285,
+    "url": "https://github.com/pandas-dev/pandas/pull/64285",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0035149322357028723,
+      "mean_toxicity_prob": 0.0011153632057054588,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63808",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63808,
+    "url": "https://github.com/pandas-dev/pandas/pull/63808",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 19,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.002164734760299325,
+      "mean_toxicity_prob": 0.0007016999956440964,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63473",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63473,
+    "url": "https://github.com/pandas-dev/pandas/pull/63473",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0006928770453669131,
+      "mean_toxicity_prob": 0.0005561848093445103,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64148",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64148,
+    "url": "https://github.com/pandas-dev/pandas/pull/64148",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 23,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0045313346199691296,
+      "mean_toxicity_prob": 0.0010059541306438168,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63463",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63463,
+    "url": "https://github.com/pandas-dev/pandas/pull/63463",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 40,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.008012194186449051,
+      "mean_toxicity_prob": 0.0014372770507179665,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64294",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64294,
+    "url": "https://github.com/pandas-dev/pandas/pull/64294",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0009918129071593285,
+      "mean_toxicity_prob": 0.0006055343821774133,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-64588",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 64588,
+    "url": "https://github.com/pandas-dev/pandas/issues/64588",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 15,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.011119868606328964,
+      "mean_toxicity_prob": 0.003257108270190656,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64379",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64379,
+    "url": "https://github.com/pandas-dev/pandas/pull/64379",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 50,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.030656272545456886,
+      "mean_toxicity_prob": 0.00134823004307691,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64077",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64077,
+    "url": "https://github.com/pandas-dev/pandas/pull/64077",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 28,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.008517493493855,
+      "mean_toxicity_prob": 0.0021162047331537387,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64662",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64662,
+    "url": "https://github.com/pandas-dev/pandas/pull/64662",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 21,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.10518576204776764,
+      "mean_toxicity_prob": 0.00992338921614213,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64291",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64291,
+    "url": "https://github.com/pandas-dev/pandas/pull/64291",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 18,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.003883443307131529,
+      "mean_toxicity_prob": 0.0011333384124251704,
+      "stratum": "heated_not_toxic_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-65075",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65075,
+    "url": "https://github.com/pandas-dev/pandas/pull/65075",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0012372637866064906,
+      "mean_toxicity_prob": 0.0007438387353128443,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63894",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63894,
+    "url": "https://github.com/pandas-dev/pandas/pull/63894",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0006121959304437041,
+      "mean_toxicity_prob": 0.0005902476259507239,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64516",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64516,
+    "url": "https://github.com/pandas-dev/pandas/pull/64516",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.00724970456212759,
+      "mean_toxicity_prob": 0.003021346618576596,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64532",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64532,
+    "url": "https://github.com/pandas-dev/pandas/pull/64532",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0018559069139882922,
+      "mean_toxicity_prob": 0.0018559069139882922,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-65365",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65365,
+    "url": "https://github.com/pandas-dev/pandas/pull/65365",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 5,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.00241779163479805,
+      "mean_toxicity_prob": 0.0009814046556130052,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64545",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64545,
+    "url": "https://github.com/pandas-dev/pandas/pull/64545",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0012636538594961166,
+      "mean_toxicity_prob": 0.0007874208483068893,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63440",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63440,
+    "url": "https://github.com/pandas-dev/pandas/pull/63440",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0016920657362788916,
+      "mean_toxicity_prob": 0.0010959893697872758,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-65087",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 65087,
+    "url": "https://github.com/pandas-dev/pandas/pull/65087",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0004964275867678225,
+      "mean_toxicity_prob": 0.0004964275867678225,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-63745",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63745,
+    "url": "https://github.com/pandas-dev/pandas/issues/63745",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 5,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.001327798585407436,
+      "mean_toxicity_prob": 0.0007140828703995794,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64871",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64871,
+    "url": "https://github.com/pandas-dev/pandas/pull/64871",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0012636538594961166,
+      "mean_toxicity_prob": 0.001145947549957782,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64520",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64520,
+    "url": "https://github.com/pandas-dev/pandas/pull/64520",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0018044259632006288,
+      "mean_toxicity_prob": 0.0018044259632006288,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-issue-63901",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "issue",
+    "discussion_number": 63901,
+    "url": "https://github.com/pandas-dev/pandas/issues/63901",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 4,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0005105687887407839,
+      "mean_toxicity_prob": 0.0004855087463511154,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64964",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64964,
+    "url": "https://github.com/pandas-dev/pandas/pull/64964",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0012636538594961166,
+      "mean_toxicity_prob": 0.0012636538594961166,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64850",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64850,
+    "url": "https://github.com/pandas-dev/pandas/pull/64850",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0012636538594961166,
+      "mean_toxicity_prob": 0.0012636538594961166,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63631",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63631,
+    "url": "https://github.com/pandas-dev/pandas/pull/63631",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0018044259632006288,
+      "mean_toxicity_prob": 0.0018044259632006288,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64735",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64735,
+    "url": "https://github.com/pandas-dev/pandas/pull/64735",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 3,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0020870764274150133,
+      "mean_toxicity_prob": 0.0010990903441173334,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64700",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64700,
+    "url": "https://github.com/pandas-dev/pandas/pull/64700",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 1,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0012636538594961166,
+      "mean_toxicity_prob": 0.0012636538594961166,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64319",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64319,
+    "url": "https://github.com/pandas-dev/pandas/pull/64319",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0006008246564306319,
+      "mean_toxicity_prob": 0.0005905716971028596,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-64289",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 64289,
+    "url": "https://github.com/pandas-dev/pandas/pull/64289",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 2,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0005386184784583747,
+      "mean_toxicity_prob": 0.0005139615095686167,
+      "stratum": "control_candidate"
+    }
+  },
+  {
+    "id": "pandas-pr-63835",
+    "repo": "pandas-dev/pandas",
+    "discussion_type": "pull_request",
+    "discussion_number": 63835,
+    "url": "https://github.com/pandas-dev/pandas/pull/63835",
+    "ground_truth": {
+      "is_toxic": null,
+      "toxicity_labels": [],
+      "severity": null,
+      "problematic_snippet": "",
+      "gold_response": ""
+    },
+    "metadata": {
+      "comment_count": 5,
+      "first_toxic_comment_index": null,
+      "is_newcomer_involved": false,
+      "max_toxicity_prob": 0.0005503440625034273,
+      "mean_toxicity_prob": 0.0005072108819149434,
+      "stratum": "control_candidate"
+    }
+  }
+]
