@@ -33,6 +33,9 @@ import anthropic
 EVAL_DIR = os.path.join(os.path.dirname(__file__), "eval")
 RUNFILE = os.path.join(os.path.dirname(__file__), ".last_run_number")
 MCP_SSE_URL = os.environ.get("MCP_SSE_URL", "http://localhost:8080/sse")
+CLI_EXPERIMENT_PREFIX = os.environ.get("CLI_EXPERIMENT_PREFIX", "cli-improved")
+MCP_EXPERIMENT_PREFIX = os.environ.get("MCP_EXPERIMENT_PREFIX", "mcp-improved")
+DEFAULT_MCP_TOOL_EXEC_SECONDS = os.environ.get("MCP_TOOL_EXEC_SECONDS", "60")
 
 REQUIRED_ENV_VARS = {
     "BRAINTRUST_API_KEY": "Braintrust API key (https://www.braintrust.dev/app/settings)",
@@ -141,16 +144,22 @@ def _detect_fatal_failure(output: str) -> str | None:
     return None
 
 
-def run_eval(script: str, run_number: str, label: str) -> tuple[bool, str | None]:
+def run_eval(script: str, run_number: str, label: str, experiment_prefix: str) -> tuple[bool, str | None]:
     """
     Runs `bt eval <script>` in a subprocess.
     Returns (passed, fatal_reason).
     """
-    env = {**os.environ, "RUN_NUMBER": run_number}
+    prefix_var = f"{label.upper()}_EXPERIMENT_PREFIX"
+    env = {**os.environ, "RUN_NUMBER": run_number, prefix_var: experiment_prefix}
+    if label == "MCP" and "MCP_TOOL_EXEC_SECONDS" not in env:
+        env["MCP_TOOL_EXEC_SECONDS"] = DEFAULT_MCP_TOOL_EXEC_SECONDS
     cmd = ["bt", "eval", script, "--project", "community-health-eval"]
 
     print(f"\n{'='*60}")
     print(f"  Running {label} eval  (run {run_number})")
+    print(f"  Experiment prefix: {experiment_prefix}")
+    if label == "MCP":
+        print(f"  MCP tool timeout: {env['MCP_TOOL_EXEC_SECONDS']}s")
     print(f"  {' '.join(cmd)}")
     print(f"{'='*60}\n")
 
@@ -200,6 +209,16 @@ def main():
         default=None,
         help="Max parallel eval subprocesses (default: conservative cap when MCP is enabled)",
     )
+    parser.add_argument(
+        "--cli-experiment-prefix",
+        default=CLI_EXPERIMENT_PREFIX,
+        help="CLI experiment name prefix (default: cli-improved)",
+    )
+    parser.add_argument(
+        "--mcp-experiment-prefix",
+        default=MCP_EXPERIMENT_PREFIX,
+        help="MCP experiment name prefix (default: mcp-improved)",
+    )
     args = parser.parse_args()
 
     # Pre-flight
@@ -246,7 +265,8 @@ def main():
 
         while pending_tasks and len(future_to_task) < max_workers:
             rn, script, label = pending_tasks.popleft()
-            future_to_task[pool.submit(run_eval, script, rn, label)] = (rn, label)
+            experiment_prefix = args.cli_experiment_prefix if label == "CLI" else args.mcp_experiment_prefix
+            future_to_task[pool.submit(run_eval, script, rn, label, experiment_prefix)] = (rn, label)
 
         while future_to_task:
             future = next(as_completed(future_to_task))
@@ -261,7 +281,8 @@ def main():
 
             if fatal_reason is None and pending_tasks:
                 next_rn, script, next_label = pending_tasks.popleft()
-                future_to_task[pool.submit(run_eval, script, next_rn, next_label)] = (next_rn, next_label)
+                experiment_prefix = args.cli_experiment_prefix if next_label == "CLI" else args.mcp_experiment_prefix
+                future_to_task[pool.submit(run_eval, script, next_rn, next_label, experiment_prefix)] = (next_rn, next_label)
 
     # Summary
     print(f"\n{'='*60}")

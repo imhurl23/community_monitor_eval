@@ -65,6 +65,8 @@ Before defining the dataset, a shared label schema is needed. The following eigh
 
 The repo includes a browser-based annotation tool at `dataset_curation/braintrust-toxicity-labeler.html` for reviewing sampled rows locally before re-importing them into Braintrust. It is designed around the same row shape produced by the curation pipeline: each row carries the discussion metadata, the current `ground_truth` / `expected` label object, and the `_review.suspect_comments` helper payload.
 
+This tool is used instead of Braintrust's built-in review flow because it surfaces model-ranked suspect comments, makes it easy to copy candidate snippets, and supports direct assignment of toxicity, severity, and label annotations in one place.
+
 The labeler supports the full manual review loop in one page:
 - import JSONL or JSON exports built from the curation pipeline
 - filter rows by search text and labeling status
@@ -178,11 +180,14 @@ Output Schema
 json
 {
   "discussion_id": "eslint-issue-17823",
+  "analysis_status": "completed",
   "toxic_detected": true,
   "snippet": "Why do maintainers even bother if they can't close issues in under a week?",
   "toxicity_label": "entitlement",
   "severity": "medium",
   "draft_response": "Thank you for raising this. We understand the frustration when resolution timelines feel slow...",
+  "task_error": null,
+  "tool_timeout_count": 0,
   "tool_calls": [...],
   "latency_ms": 4200,
   "total_tokens": 1850,
@@ -216,18 +221,17 @@ bt eval community_health_cli.py --project "community-health-eval"
 
 ### MCP Workflow
 
-The MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. Relevant tools:
+The MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. In the current server/tooling setup, the code normalizes generic MCP tools into a canonical read surface:
 
 ```
-get_issue(owner, repo, issue_number)           → issue metadata
-get_issue_comments(owner, repo, issue_number)  → issue comment thread
-get_pull_request(owner, repo, pullNumber)      → PR metadata
-get_pull_request_comments(owner, repo, pullNumber) → PR review comments
-list_issues(owner, repo, state, labels)        → discovery
-search_issues(query)                           → broader search
+issue_read(method=get, ...)                    → canonical `get_issue`
+issue_read(method=get_comments, ...)           → canonical `get_issue_comments`
+pull_request_read(method=get, ...)             → canonical `get_pull_request`
+pull_request_read(method=get_comments, ...)    → canonical `get_pull_request_comments`
+pull_request_read(method=get_review_comments, ...) → canonical `get_pull_request_comments`
 ```
 
-A known tool gap in the official GitHub MCP Server is that `get_issue_comments` was added only recently after a feature request. In earlier versions of the server, the agent must fall back to `gh api` or use `search_issues` to reconstruct comment context, which introduces a reliability variance that is itself a finding worth measuring.[^13]
+The current code handles the MCP server's generic tool naming explicitly by normalizing `issue_read` / `pull_request_read` plus `method=...` before counting retrieved comments or compressing thread text. This is necessary because the server does not expose the same stable top-level tool names as the CLI workflow.[^13]
 
 **MCP eval harness:**
 ```python
@@ -287,7 +291,7 @@ flowchart TD
 
 ## Cost Control
 
-Steps are taken in `community_health_cli.py` and `community_health_mcp.py` to reduce token spend and wall-clock latency without (steeply) degrading task quality. All cost controls (`ANALYSIS_MODEL`, `RETRIEVAL_MODEL`, `MAX_TOTAL_TOKENS`, `MAX_TOOL_CALLS`, `MAX_TOOL_ERRORS`, `MAX_TOOL_RESULT_CHARS`, `MAX_TOOL_EXEC_SECONDS`, etc.) are configurable via environment variables so they can be individually disabled for ablation experiments.
+Steps are taken in `community_health_cli.py` and `community_health_mcp.py` to reduce token spend and wall-clock latency without (steeply) degrading task quality. All cost controls (`ANALYSIS_MODEL`, `RETRIEVAL_MODEL`, `MAX_TOTAL_TOKENS`, `MAX_TOOL_CALLS`, `MAX_TOOL_ERRORS`, `MAX_TOOL_RESULT_CHARS`, `CLI_TOOL_EXEC_SECONDS`, `MCP_TOOL_EXEC_SECONDS`, etc.) are configurable via environment variables so they can be individually disabled for ablation experiments.
 
 ### Control 1 — Haiku by default, with optional retrieval/analysis split
 
@@ -342,7 +346,7 @@ For planning purposes, a single `run_evals.py --runs 1` invocation over a 40-row
 
 Under the current code defaults, both retrieval and analysis use Haiku unless overridden. The hard per-row agent budget is bounded by `MAX_TOTAL_TOKENS=80000`, per-turn output caps of 500 retrieval tokens and 1200 analysis tokens, and Haiku pricing of `$0.80 / MTok` input and `$4.00 / MTok` output. That yields a larger worst-case ceiling than the earlier 50k-token configuration, but in practice rows typically complete far below that bound because tool-result compression, lower per-turn caps, and per-tool timeouts keep the loops shorter.
 
-Scorer cost is much smaller. Toxic rows can trigger up to three Haiku judge calls per toxic row-run under the current scorer stack: `deescalation_quality`, `snippet_grounding`, and a second `snippet_grounding` call via `failure_mode_tagger`. With 16 toxic row-runs total, scorer spend remains on the order of a few cents, so the total worst-case budget for a single 40-row `--runs 1` execution is roughly `$6.30`.
+Scorer cost is much smaller. Toxic rows can trigger up to two Haiku judge calls per toxic row-run under the current scorer stack: `deescalation_quality` and `snippet_grounding`. With 16 toxic row-runs total, scorer spend remains on the order of a few cents, so the total worst-case budget for a single 40-row `--runs 1` execution is roughly `$6.30`.
 
 Wall-clock time is dominated by MCP. Braintrust typically runs about 10 examples concurrently per eval process, while the MCP workflow additionally gates concurrent SSE sessions with `MCP_MAX_CONCURRENT=3`. With `MAX_LATENCY_MS=120000`, this gives an upper-bound planning estimate of about 8 minutes for CLI, about 27 to 28 minutes for MCP, and therefore about 27 to 28 minutes end-to-end when both workflows are launched in parallel by `run_evals.py`. In practice, when rows stay closer to the target latency region than the timeout ceiling, a 40-row run is more likely to complete in roughly 4 to 6 minutes.
 
@@ -419,17 +423,17 @@ Verifies that the quoted snippet actually appears in the retrieved comment threa
 
 The current scorer list also includes three normalized telemetry scorers that make the CLI vs. MCP tradeoff easier to compare row by row:
 
-- `token_efficiency`: inverse-normalized score based on `total_tokens`
+- `token_efficiency`: inverse-normalized score based on `total_tokens`, with the current default scale anchored at 10k tokens and decaying to 0 at 50k
 - `tool_call_efficiency`: inverse-normalized score based on total tool calls
 - `latency_score`: inverse-normalized score based on `latency_ms`
 
-Finally, `failure_mode_tagger` derives post-hoc failure tags from the scored output and converts them into a fractional penalty score so Braintrust can slice rows by failure class while still keeping a numeric column in the experiment table.
+Finally, `failure_mode_tagger` derives the highest-priority failure mode from the scored output and returns a numeric ordinal for Braintrust compatibility. The current mapping is `0 = none`, `1 = scope_violation`, `2 = hallucination`, `3 = false_negative`, `4 = false_positive`, `5 = retrieval_failure`, `6 = report_not_posted`, `7 = label_mismatch`, `99 = scorer error`.
 
 ***
 
 ## Failure Taxonomy
 
-Each eval row is tagged with zero or more failure mode labels. These appear as metadata in Braintrust and enable slice-based analysis.[^15]
+The scorer code defines the following failure taxonomy and collapses each row to a single primary failure mode via `failure_mode_tagger`. These tags are not currently emitted as task metadata; the numeric primary-mode score is what is stored in Braintrust today.[^15]
 
 | Tag | Definition | Likely Cause |
 |---|---|---|
@@ -450,19 +454,15 @@ Each eval row is tagged with zero or more failure mode labels. These appear as m
 ```
 Project: community-health-eval
 ├── Dataset: community_monitor_pandas
-├── Experiment: cli-baseline-run-1
-├── Experiment: cli-baseline-run-2
-├── Experiment: cli-baseline-run-3
-├── Experiment: cli-baseline-run-4
-├── Experiment: cli-baseline-run-5
-├── Experiment: mcp-baseline-run-1
-├── Experiment: mcp-baseline-run-2
-├── Experiment: mcp-baseline-run-3
-├── Experiment: mcp-baseline-run-4
-└── Experiment: mcp-baseline-run-5
+├── Experiment: cli-improved-run-1
+├── Experiment: cli-improved-run-2
+├── Experiment: ...
+├── Experiment: mcp-improved-run-1
+├── Experiment: mcp-improved-run-2
+└── Experiment: ...
 ```
 
-`run_evals.py` now defaults to `--runs 5`, not 3, and launches workflow/run combinations via a `ThreadPoolExecutor`. `--max-workers` can cap the number of concurrent `bt eval` subprocesses; otherwise the current default is conservative when MCP is enabled: 2 workers when both workflows are running, 1 worker for MCP-only runs, and full fanout only for CLI-only runs. If a fatal Anthropic billing failure is detected, pending tasks are cleared and the run exits early after in-flight tasks complete.
+`run_evals.py` now defaults to `--runs 5`, not 3, and launches workflow/run combinations via a `ThreadPoolExecutor`. `--max-workers` can cap the number of concurrent `bt eval` subprocesses; otherwise the current default is conservative when MCP is enabled: 2 workers when both workflows are running, 1 worker for MCP-only runs, and full fanout only for CLI-only runs. Experiment names are configurable via `--cli-experiment-prefix` / `--mcp-experiment-prefix` (defaulting to `cli-improved` / `mcp-improved`). If a fatal Anthropic billing failure is detected, pending tasks are cleared and the run exits early after in-flight tasks complete.
 
 ### Metadata Tags per Row
 
@@ -472,13 +472,15 @@ span.log(metadata={
     "repo": "eslint/eslint",
     "discussion_type": "issue",
     "stratum": "borderline",    # clearly_toxic | borderline | heated | control
-    "failure_modes": ["retrieval_failure"],  # populated post-scoring
+  "discussion_id": "eslint-issue-17823",
+  "retrieval_model": "claude-haiku-4-5-20251001",
+  "analysis_model": "claude-haiku-4-5-20251001",
 })
 ```
 
 ### Tracking Latency and Token Cost
 
-The task functions emit explicit output fields for `latency_ms`, `retrieval_latency_ms`, `llm_latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, and `cost_usd`. They also break spend down into `retrieval_tokens` and `analysis_tokens`, plus `retrieval_model` and `analysis_model`, so the Haiku-first optimization can be analyzed directly. The MCP task additionally logs `queue_wait_ms`, which separates semaphore wait time from the row's actual task budget.
+The task functions emit explicit output fields for `latency_ms`, `retrieval_latency_ms`, `llm_latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, and `cost_usd`. They also break spend down into `retrieval_tokens` and `analysis_tokens`, plus `retrieval_model` and `analysis_model`, so the Haiku-first optimization can be analyzed directly. Both tasks now also emit `analysis_status`, `task_error`, `tool_error_messages`, and `tool_timeout_count` so incomplete rows can be analyzed rather than treated as silent failures. The MCP task additionally logs `queue_wait_ms`, which separates semaphore wait time from the row's actual task budget.
 
 ***
 
@@ -538,7 +540,7 @@ The final deliverable of the workflow is a per-discussion "Community Health Repo
 Thank you for raising this. We understand that waiting for resolution can be frustrating, especially when a bug is blocking your work. Our maintainers are volunteers working across time zones, and we aim to triage all issues within two weeks. If you have bandwidth to contribute a fix, we would be glad to review a PR.
 ```
 
-The structured format still needs to be machine-checkable, but the current hard requirement in code is simpler: the model must return JSON containing the toxicity finding, snippet, single `toxicity_label`, severity, draft response, and scorer-facing retrieved thread text. The workflow code then posts the sandbox issue, and `scope_containment` plus `report_posted` cover the safety and delivery checks.
+The structured format still needs to be machine-checkable, but the current hard requirement in code is simpler: the model must return JSON containing the toxicity finding, snippet, single `toxicity_label`, severity, and draft response. The workflow code then normalizes missing fields into a stable schema, attaches scorer-facing retrieval fields, and posts the sandbox issue. If retrieval or tool execution aborts, the row is still returned with `analysis_status="incomplete"` plus `task_error` / timeout metadata so the failure is analyzable inside Braintrust rather than crashing the whole eval.
 
 ***
 
@@ -556,7 +558,7 @@ The structured format still needs to be machine-checkable, but the current hard 
 | `token_efficiency` | Deterministic telemetry | 0–1 | Mean by workflow |
 | `tool_call_efficiency` | Deterministic telemetry | 0–1 | Mean by workflow |
 | `latency_score` | Deterministic telemetry | 0–1 | Mean by workflow |
-| `failure_mode_tagger` | Deterministic post-hoc | 0–1 | Penalized by number of failure tags |
+| `failure_mode_tagger` | Deterministic post-hoc | numeric ordinal | Primary failure mode rank (`0 = none`, `99 = scorer error`) |
 | `tool_call_count` | Metadata | Integer | Mean; CLI vs. MCP distribution |
 | `latency_ms` | Metadata | Integer | Mean; p50/p95 split |
 | `total_tokens` | Metadata | Integer | Mean; cost estimate |

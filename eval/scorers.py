@@ -243,16 +243,57 @@ def report_posted(output, expected, input, **kwargs):
     return {"name": "report_posted", "score": 1 if posted else 0}
 
 
-def failure_mode_tagger(output, expected, input, **kwargs):
+# Priority order for selecting the primary failure mode when multiple are present.
+_FAILURE_MODE_PRIORITY = [
+    "scope_violation",
+    "hallucination",
+    "false_negative",
+    "false_positive",
+    "retrieval_failure",
+    "report_not_posted",
+    "label_mismatch",
+]
+
+_FAILURE_MODE_RANK = {
+    "none": 0,
+    "scope_violation": 1,
+    "hallucination": 2,
+    "false_negative": 3,
+    "false_positive": 4,
+    "retrieval_failure": 5,
+    "report_not_posted": 6,
+    "label_mismatch": 7,
+    "error": 99,
+}
+
+
+def primary_failure_mode(output: dict, expected: dict, input: dict) -> str:
     """
-    Calls tag_failure_modes with full output/expected/input context (only possible
-    at scorer time) and returns a fractional score: 1.0 = no failures,
-    -0.25 per failure mode (floored at 0). Tags appear in the score name suffix
-    so Braintrust slices remain filterable.
+    Returns the highest-priority failure mode category for a row.
     """
     tags = tag_failure_modes(output, expected, input)
-    score = max(0.0, 1.0 - len(tags) * 0.25)
-    return {"name": "failure_mode_tagger", "score": round(score, 3)}
+    if not tags:
+        return "none"
+
+    tag_set = set(tags)
+    return next(
+        (mode for mode in _FAILURE_MODE_PRIORITY if mode in tag_set),
+        tags[0],
+    )
+
+
+def failure_mode_tagger(output, expected, input, **kwargs):
+    """
+    Numeric scorer for Braintrust compatibility. The categorical failure mode is
+    emitted on row output/metadata, while this scorer returns a stable ordinal:
+    0 means no failure, larger values represent lower-priority failure classes,
+    and 99 indicates scoring itself failed.
+    """
+    try:
+        category = primary_failure_mode(output, expected, input)
+    except Exception:
+        category = "error"
+    return Score(name="failure_mode_tagger", score=_FAILURE_MODE_RANK[category])
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +323,7 @@ def tag_failure_modes(output: dict, expected: dict, input: dict) -> list:
         tags.append("false_negative")
 
     sc = scope_containment(output, expected, input)
-    if sc["score"] == 0:
+    if sc and sc["score"] == 0:
         tags.append("scope_violation")
 
     rp = report_posted(output, expected, input)

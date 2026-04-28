@@ -12,13 +12,15 @@ Set RUN_NUMBER env var to name experiments:
 
 import json
 import os
+import ssl
 import subprocess
 import time
 import urllib.error
 import urllib.request
 import anthropic
 import braintrust
-from braintrust import Eval, start_span
+import certifi
+from braintrust import Eval, start_span, wrap_anthropic
 
 from scorers import ALL_SCORERS, WRITE_TOOLS
 
@@ -29,7 +31,8 @@ from scorers import ALL_SCORERS, WRITE_TOOLS
 PROJECT = "community-health-eval"
 DATASET_NAME = "community_monitor_pandas"
 RUN_NUMBER = os.environ.get("RUN_NUMBER", "1")
-EXPERIMENT_NAME = f"cli-baseline-run-{RUN_NUMBER}"
+EXPERIMENT_PREFIX = os.environ.get("CLI_EXPERIMENT_PREFIX", "cli-improved")
+EXPERIMENT_NAME = f"{EXPERIMENT_PREFIX}-run-{RUN_NUMBER}"
 # Cost optimisation — retrieval and analysis both default to Haiku now.
 # Override ANALYSIS_MODEL/RETRIEVAL_MODEL if you want to spend more for quality.
 MODEL_PRICING = {
@@ -48,7 +51,9 @@ MAX_AGENT_TURNS = int(os.environ.get("MAX_AGENT_TURNS", "10"))
 MAX_TOTAL_TOKENS = int(os.environ.get("MAX_TOTAL_TOKENS", "80000"))
 MAX_TOOL_CALLS = int(os.environ.get("MAX_TOOL_CALLS", "6"))        # total tool calls per row
 MAX_LATENCY_MS = int(os.environ.get("MAX_LATENCY_MS", "120000"))   # 2-min wall-clock limit per row
-MAX_TOOL_EXEC_SECONDS = float(os.environ.get("MAX_TOOL_EXEC_SECONDS", "30"))
+MAX_TOOL_EXEC_SECONDS = float(
+    os.environ.get("CLI_TOOL_EXEC_SECONDS", os.environ.get("MAX_TOOL_EXEC_SECONDS", "30"))
+)
 # Cost optimisation — tip 2: 8 K chars ≈ 2 K tokens, enough for any real thread.
 # Paginated responses can exceed 100 K chars and inflate context on every re-sent turn.
 MAX_TOOL_RESULT_CHARS = int(os.environ.get("MAX_TOOL_RESULT_CHARS", "8000"))
@@ -213,6 +218,17 @@ def _exec_tool(name: str, args: dict) -> str:
 
 
 def _build_report_body(repo: str, dtype: str, number: int, output: dict) -> str:
+    if output.get("task_error"):
+        return "\n".join([
+            f"# Community Health Report for {repo} {dtype} #{number}",
+            "",
+            "## Status",
+            "Analysis incomplete due to retrieval/tool failure.",
+            "",
+            "## Error",
+            output["task_error"],
+        ])
+
     if output.get("toxic_detected"):
         snippet = output.get("snippet") or "[none]"
         label = output.get("toxicity_label") or "[none]"
@@ -249,6 +265,7 @@ def _post_report_issue(board_repo: str, title: str, body: str) -> str:
     api_url = f"https://api.github.com/repos/{owner_repo}/issues"
     payload = json.dumps({"title": title, "body": body}).encode("utf-8")
     token = os.environ.get("GITHUB_AGENT_TOKEN", "")
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
     request = urllib.request.Request(
         api_url,
         data=payload,
@@ -261,7 +278,7 @@ def _post_report_issue(board_repo: str, title: str, body: str) -> str:
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
             created = json.loads(response.read().decode("utf-8"))
             return created.get("html_url", "")
     except urllib.error.HTTPError as exc:
@@ -294,6 +311,7 @@ Thread text:
     response = client.messages.create(
         model=LABEL_CLASSIFIER_MODEL,
         max_tokens=50,
+        temperature=0,
         messages=[{"role": "user", "content": prompt}],
     )
     label = response.content[0].text.strip()
@@ -310,12 +328,63 @@ Thread text:
     return label if label in allowed else None
 
 
+def _normalize_analysis_output(output: dict | None) -> dict:
+    if not isinstance(output, dict):
+        output = {}
+
+    toxic_detected = output.get("toxic_detected")
+    if isinstance(toxic_detected, bool):
+        normalized_detected = toxic_detected
+    else:
+        normalized_detected = any(
+            output.get(field) not in (None, "")
+            for field in ("snippet", "toxicity_label", "severity", "draft_response")
+        )
+
+    output["toxic_detected"] = normalized_detected
+    if not normalized_detected:
+        output["snippet"] = None
+        output["toxicity_label"] = None
+        output["severity"] = None
+        output["draft_response"] = None
+        return output
+
+    output["snippet"] = output.get("snippet") or None
+    output["toxicity_label"] = output.get("toxicity_label") or None
+    severity = output.get("severity")
+    output["severity"] = severity if severity in {"low", "medium", "high"} else None
+    output["draft_response"] = output.get("draft_response") or None
+    return output
+
+
 # Cost optimisation — tip 3: strip GitHub metadata from read-tool JSON responses.
 # Raw get_issue / get_issue_comments results include timestamps, labels, milestones,
 # assignees, etc. that are irrelevant to toxicity analysis. Compressing to just
 # title + body + comment texts cuts each tool_result by ~60%, reducing the context
 # re-sent to the LLM on every subsequent turn.
 _READ_TOOLS = {"get_issue", "get_issue_comments", "get_pull_request", "get_pull_request_comments"}
+
+
+def _count_retrieved_comments(tool_name: str, result_text: str) -> int:
+    if tool_name not in _READ_TOOLS:
+        return 0
+
+    try:
+        data = json.loads(result_text)
+    except (json.JSONDecodeError, ValueError):
+        return 0
+
+    if tool_name == "get_issue":
+        return 0
+
+    if tool_name == "get_pull_request":
+        comments = data.get("comments", []) if isinstance(data, dict) else []
+        return len(comments) if isinstance(comments, list) else 0
+
+    if tool_name in ("get_issue_comments", "get_pull_request_comments") and isinstance(data, list):
+        return len(data)
+
+    return 0
 
 
 def _compress_tool_result(tool_name: str, result_text: str) -> str:
@@ -326,7 +395,13 @@ def _compress_tool_result(tool_name: str, result_text: str) -> str:
         data = json.loads(result_text)
     except (json.JSONDecodeError, ValueError):
         return result_text  # plain-text response — return as-is
-    if tool_name in ("get_issue", "get_pull_request"):
+    if tool_name == "get_issue":
+        return json.dumps({
+            "title": data.get("title", ""),
+            "body": data.get("body", ""),
+        })
+
+    if tool_name == "get_pull_request":
         return json.dumps({
             "title": data.get("title", ""),
             "body": data.get("body", ""),
@@ -357,7 +432,7 @@ def cli_agent_task(input: dict) -> dict:
     dtype = input["discussion_type"]
     start_time = time.time()
 
-    client = anthropic.Anthropic(max_retries=4)  # handles 429/529 with exponential backoff
+    client = wrap_anthropic(anthropic.Anthropic(max_retries=4))  # handles 429/529 with exponential backoff
     tool_calls_log = []
     total_input_tokens = 0
     total_output_tokens = 0
@@ -368,7 +443,11 @@ def cli_agent_task(input: dict) -> dict:
     llm_turns = 0
     per_turn_tokens = []
     tool_error_count = 0
+    tool_timeout_count = 0
+    tool_error_messages = []
+    task_error = None
     retrieved_thread_parts = []
+    retrieved_comment_count = 0
     output = {}
 
     messages = [{
@@ -399,30 +478,34 @@ Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
 }}""",
     }]
 
-    with start_span("cli-agent"):
+    with start_span("cli-agent") as span:
         while True:
             if llm_turns >= MAX_AGENT_TURNS:
-                raise RuntimeError(
+                task_error = (
                     f"Agent loop aborted: reached MAX_AGENT_TURNS={MAX_AGENT_TURNS}. "
                     "Increase MAX_AGENT_TURNS env var if needed."
                 )
+                break
             if total_input_tokens + total_output_tokens >= MAX_TOTAL_TOKENS:
-                raise RuntimeError(
+                task_error = (
                     f"Agent loop aborted: reached MAX_TOTAL_TOKENS={MAX_TOTAL_TOKENS} "
                     f"({total_input_tokens + total_output_tokens} tokens used). "
                     "Increase MAX_TOTAL_TOKENS env var if needed."
                 )
+                break
             if len(tool_calls_log) >= MAX_TOOL_CALLS:
-                raise RuntimeError(
+                task_error = (
                     f"Agent loop aborted: reached MAX_TOOL_CALLS={MAX_TOOL_CALLS}. "
                     "Increase MAX_TOOL_CALLS env var if needed."
                 )
+                break
             elapsed_ms = int((time.time() - start_time) * 1000)
             if elapsed_ms >= MAX_LATENCY_MS:
-                raise RuntimeError(
+                task_error = (
                     f"Agent loop aborted: exceeded MAX_LATENCY_MS={MAX_LATENCY_MS} "
                     f"({elapsed_ms}ms elapsed). Increase MAX_LATENCY_MS env var if needed."
                 )
+                break
 
             # Cost optimisation — tip 1: first turn is pure retrieval (the model only
             # decides which tools to call), so Haiku is sufficient. Later turns use
@@ -438,6 +521,7 @@ Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
             response = client.messages.create(
                 model=turn_model,
                 max_tokens=turn_max_tokens,
+                temperature=0,
                 tools=CLI_TOOLS,
                 messages=messages,
             )
@@ -481,15 +565,27 @@ Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
                 try:
                     result_text = _exec_tool(block.name, args)
                     tool_error_count = 0  # reset on success
+                    tool_calls_log[-1]["result"] = "ok"
                 except RuntimeError as e:
                     tool_error_count += 1
                     result_text = f"[Tool error] {e}"
+                    tool_error_messages.append(result_text)
+                    tool_calls_log[-1]["error"] = result_text
+                    if "timed out" in str(e).lower():
+                        tool_timeout_count += 1
                     if tool_error_count >= MAX_TOOL_ERRORS:
-                        raise RuntimeError(
-                            f"Agent loop aborted: {tool_error_count} consecutive tool errors. "
-                            "Increase MAX_TOOL_ERRORS env var if needed."
+                        task_error = (
+                            f"Agent loop aborted after {tool_error_count} consecutive tool errors; "
+                            f"last error: {result_text}"
                         )
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": result_text,
+                        })
+                        break
                 total_tool_ms += int((time.time() - tool_exec_start) * 1000)
+                retrieved_comment_count += _count_retrieved_comments(block.name, result_text)
                 # Cost optimisation — tip 3: strip metadata before char-truncation
                 # so the character budget is spent on content, not timestamps/labels.
                 result_text = _compress_tool_result(block.name, result_text)
@@ -503,13 +599,25 @@ Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
                     "content": result_text,
                 })
 
+            if task_error is not None:
+                break
+
             messages.append({
                 "role": "assistant",
                 "content": [b.model_dump(exclude_none=True) for b in response.content],
             })
             messages.append({"role": "user", "content": tool_results})
 
+            if task_error is not None:
+                break
+
+    output = _normalize_analysis_output(output)
     thread_text = "\n".join(retrieved_thread_parts)
+    if task_error is not None:
+        output["task_error"] = task_error
+    output["tool_error_messages"] = tool_error_messages
+    output["tool_timeout_count"] = tool_timeout_count
+    output["analysis_status"] = "incomplete" if task_error else "completed"
     if output.get("toxic_detected"):
         output["toxicity_label"] = _classify_toxicity_label(
             client,
@@ -530,7 +638,6 @@ Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
             "result": report_url,
         })
 
-    retrieved_comment_count = thread_text.count("\n[") if thread_text else 0
     latency_ms = int((time.time() - start_time) * 1000)
     analysis_input_tokens = total_input_tokens - retrieval_input_tokens
     analysis_output_tokens = total_output_tokens - retrieval_output_tokens
@@ -563,6 +670,30 @@ Step 3 — Respond ONLY with a JSON object — no markdown, no preamble:
     output["stratum"] = input.get("metadata", {}).get("stratum", "")
     output["retrieved_comment_count"] = retrieved_comment_count
     output["retrieved_thread_text"] = thread_text
+
+    span.log(
+        metadata={
+            "workflow": "cli",
+            "repo": repo,
+            "discussion_type": dtype,
+            "stratum": output["stratum"],
+            "discussion_id": output["discussion_id"],
+            "retrieval_model": RETRIEVAL_MODEL,
+            "analysis_model": MODEL,
+        },
+        metrics={
+            "latency_ms": latency_ms,
+            "retrieval_latency_ms": total_tool_ms,
+            "llm_latency_ms": total_llm_ms,
+            "tool_calls": len(tool_calls_log),
+            "tokens": output["total_tokens"],
+            "prompt_tokens": total_input_tokens,
+            "completion_tokens": total_output_tokens,
+            "cost_usd": output["cost_usd"],
+            "retrieval_tokens": output["retrieval_tokens"],
+            "analysis_tokens": output["analysis_tokens"],
+        },
+    )
 
     return output
 
