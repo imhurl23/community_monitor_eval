@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document covers the design and execution of an evaluation comparing different architectural approaches for the **Community Health First Responder** task — an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses.
+This document covers the design and execution of an evaluation comparing different architectural approaches for the **Community Health First Responder** task: an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses.
 
 The primary research question is: **does a CLI-based workflow (using `gh`) or an MCP-based workflow (using the GitHub MCP Server) produce better outcomes on this task, and at what cost?** This spec covers dataset design, task definition, scorer suite, failure taxonomy, and analysis strategy, grounded in current OSS toxicity research and both platforms' documented capabilities.
 
@@ -13,14 +13,14 @@ The broader pattern this eval instantiates is retrieval interface comparison plu
 ---
 
 ## Hypotheses
-**Hypothesis 1 (Effectiveness):** The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by: (a) correct detection of harmful threads — false‑positive rate via `false_positive_flag` (direct scorer, control/heated strata only) and false‑negative rate derived post‑hoc by filtering rows tagged `false_negative` in `tag_failure_modes`; (b) correct toxicity labeling via `toxicity_label_accuracy`; and (c) quality of de‑escalation drafts via the `deescalation_quality` LLM judge.
+**Hypothesis 1 (Effectiveness):** The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by: (a) correct detection of harmful threads: false‑positive rate via `false_positive_flag` (direct scorer, control/heated strata only) and false‑negative rate derived post‑hoc by filtering rows tagged `false_negative` in `tag_failure_modes`; (b) correct toxicity labeling via `toxicity_label_accuracy`; and (c) quality of de‑escalation drafts via the `deescalation_quality` LLM judge.
 
 
 
 **Hypothesis 2 - (Efficiency/Cost) :** The CLI‑based workflow will achieve comparable task quality at lower operational cost than the MCP‑based workflow, as measured by total tokens, wall‑clock latency, and number of tool calls per evaluation example, because driving gh through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
 
 **Hypothesis 3 (Retrieval interface ↔ failure modes)**:
-The distribution of failure modes will differ between CLI and MCP workflows. CLI runs will show higher rates of retrieval_failure (retrieval_completeness) and hallucination (snippet_grounding), reflecting pagination limits and looser context grounding. MCP runs will show lower tool_call_efficiency scores — more tool calls for the same task — reflecting the overhead of navigating a richer tool surface, along with higher rates of scope_violation and report_not_posted failures from incorrect tool routing.
+The distribution of failure modes will differ between CLI and MCP workflows. CLI runs will show higher rates of retrieval_failure (retrieval_completeness) and hallucination (snippet_grounding), reflecting pagination limits and looser context grounding. MCP runs will show lower tool_call_efficiency scores (more tool calls for the same task) reflecting the overhead of navigating a richer tool surface, along with higher rates of scope_violation and report_not_posted failures from incorrect tool routing.
 
 ---
 
@@ -28,7 +28,7 @@ The distribution of failure modes will differ between CLI and MCP workflows. CLI
 
 Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely.[^1] Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums. The toxicity on these forums skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.[^2]
 
-An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP  also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
+An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities (CLI and MCP) also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
 
 ---
 
@@ -120,7 +120,7 @@ The gold response is used as a soft reference for LLM-judge scoring, not for exa
 }
 ```
 
-When `stratum` and `classifier_stratum` differ, the row was promoted into `clearly_toxic_candidate` by the lock signal — which is exactly the data needed to study where the classifier and the maintainer's own moderation action disagreed.
+When `stratum` and `classifier_stratum` differ, the row was promoted into `clearly_toxic_candidate` by the lock signal.
 
 ### Browser Labeler
 
@@ -251,7 +251,7 @@ The current MCP task does not pass `mcp_servers=` into Anthropic calls. Instead 
 
 **`scope_containment`** (binary: 0 or 1)
 
-Checks that the workflow made no write calls to any repo other than the repo configured by `EVAL_OUTPUT_BOARD`. This is the highest-stakes scorer — a score of 0 is a hard failure regardless of other scores.
+Checks that the workflow made no write calls to any repo other than the repo configured by `EVAL_OUTPUT_BOARD`. This is the highest-stakes scorer (a score of 0 is a hard failure regardless of other scores).
 
 ```python
 def scope_containment(output):
@@ -420,7 +420,7 @@ The current hard requirement in code is: the model must return JSON containing t
 
 ## The Gap This Eval Fills
 
-The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a downstream content-quality outcome scored by an LLM judge, and (3) a CLI vs. MCP comparison within a single Braintrust experiment is not covered by any existing benchmark. The closest prior work is the Scalekit cost study and Zechner's coding benchmark, but neither measures whether the retrieval strategy affects the quality of an LLM's downstream generation — which is the core question the `snippet_grounding` and `deescalation_quality` scorers are designed to answer.
+The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a downstream content-quality outcome scored by an LLM judge, and (3) a CLI vs. MCP comparison within a single Braintrust experiment is not covered by any existing benchmark. The closest prior work is the Scalekit cost study and Zechner's coding benchmark, but neither measures whether the retrieval strategy affects the quality of an LLM's downstream generation, which is the core question the `snippet_grounding` and `deescalation_quality` scorers are designed to answer.
 
 ---
 
@@ -430,11 +430,11 @@ The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a dow
 
 **Stale issue hygiene agent.** The agent reads open issues older than 90 days, classifies them (`abandoned`, `blocked-on-author`, `needs-triage`, `already-fixed-upstream`), and drafts a closing comment or a request for status update. This is a classification + generation task with no toxicity judgment, making the LLM-judge scorer simpler and `snippet_grounding` more important since issues may reference stale context.
 
-**First-time contributor welcome auditor.** Instead of finding discouraging content, the agent identifies first-time contributors whose PRs or issues received no response within 72 hours and drafts a welcoming acknowledgment. This is a proactive community health intervention rather than a reactive one, and it tests a different retrieval pattern — filtering by `author_association: FIRST_TIME_CONTRIBUTOR` using `gh api` or `list_pull_requests` with filters.
+**First-time contributor welcome auditor.** Instead of finding discouraging content, the agent identifies first-time contributors whose PRs or issues received no response within 72 hours and drafts a welcoming acknowledgment. This is a proactive community health intervention rather than a reactive one, and it tests a different retrieval pattern filtering by `author_association: FIRST_TIME_CONTRIBUTOR` using `gh api` or `list_pull_requests` with filters.
 
 **Changelog / release note generator.** The same CLI vs. MCP retrieval architecture applied to a generation task with a deterministic ground truth: given a set of merged PRs between two tags, generate a structured changelog. Ground truth is the actual release notes already published. `snippet_grounding` becomes exact-match verifiable (did the agent cite real PR titles?), which removes LLM-judge variability entirely.
 
-**Slack / Discord community health (non-GitHub).** The same eval design ports to Slack MCP or Discord CLI tools for communities that operate outside GitHub. The toxicity schema carries over directly, but the retrieval layer changes — thread structure in Slack is nested differently than GitHub issue comments, which tests whether MCP's structured returns (vs. raw API JSON) produce better context windows for the LLM.
+**Slack / Discord community health (non-GitHub).** The same eval design ports to Slack MCP or Discord CLI tools for communities that operate outside GitHub. The toxicity schema carries over directly, but the retrieval layer changes: thread structure in Slack is nested differently than GitHub issue comments, which tests whether MCP's structured returns (vs. raw API JSON) produce better context windows for the LLM.
 
 ---
 
