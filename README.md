@@ -1,46 +1,38 @@
 # OSS Community Health First Responder: CLI vs. MCP Eval Design
 
-## TLDR: Which workflow (CLI/MCP) best helps to monitor and keep the conversation happening in our open source communities safe and effective for dev? 
-- Dataset curation builds a Braintrust dataset from GitHub issues and PR leverages a new OSS Toxicity Specific Model to help label into strata and ensure broad pulling from each stata to ensure... 
-
-- The task is a Community Health First Responder workflow: retrieve the full discussion thread, decide whether toxic or discouraging content is present, return a structured analysis with snippet, single toxicity label, severity, and draft response, then post a sandbox report
-
-
-
 ## Overview
-This doc explains the building and executing of an evaluation of different architectural choices for the **Community Health First Responder** task. This task involves an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses. 
+
+This document covers the design and execution of an evaluation comparing different architectural approaches for the **Community Health First Responder** task — an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses.
 
 The primary research question is: **does a CLI-based workflow (using `gh`) or an MCP-based workflow (using the GitHub MCP Server) produce better outcomes on this task, and at what cost?** This spec covers dataset design, task definition, scorer suite, failure taxonomy, and analysis strategy, grounded in current OSS toxicity research and both platforms' documented capabilities.
 
-The broader pattern this eval instantiates — retrieval interface comparison + downstream content quality measurement — maps onto a class of problems identified in the OPENTOOLS framework and the four-pillar agent assessment framework from (https://arxiv.org/pdf/2604.00137)[`Open, Reliable, and Collective: A Community-Driven Framework for
-Tool-Using AI Agents`]: any task where tool selection and retrieval completeness directly affect the quality of a subsequent LLM generation step benefits from this two-axis design (deterministic retrieval scorers + LLM-judge generation scorers). The GitHub community health task is a particularly clean instantiation because the ground truth is human-annotatable, the write-safety constraint is crisp, and the CLI/MCP tooling gap is structurally well-documented
+The broader pattern this eval instantiates is retrieval interface comparison plus downstream content quality measurement. The pattern maps onto a class of problems identified in the OPENTOOLS framework and the four-pillar agent assessment framework from ["Open, Reliable, and Collective: A Community-Driven Framework for Tool-Using AI Agents"](https://arxiv.org/pdf/2604.00137): any task where tool selection and retrieval completeness directly affect the quality of a subsequent LLM generation step benefits from this two-axis design (deterministic retrieval scorers + LLM-judge generation scorers).
 
-Hypothesis 1 (Effectiveness): The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by human labels and LLM‑judge scores for (a) correct detection of harmful threads, (b) correct toxicity severity and type labeling, and (c) quality of de‑escalation drafts, because MCP exposes more structured, semantically rich GitHub tools that support more complete and targeted retrieval.
+---
 
-Hypothesis 2 (Efficiency / Cost): The CLI‑based workflow will achieve comparable task quality at lower operational cost than the MCP‑based workflow, as measured by total tokens, wall‑clock latency, and number of tool calls per evaluation example, because driving gh through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
+## Hypotheses
 
-Hypothesis 3 (Retrieval interface ↔ failure modes): The distribution of failure modes will differ systematically between workflows: MCP runs will exhibit fewer retrieval incompleteness and irrelevant‑context failures but more tool‑selection / protocol misuse failures, while CLI runs will show the inverse pattern, with more partial retrieval and parsing / heuristic limits but not the same overhead limit reaching and tool‑use failures.
+**Hypothesis 1 — Effectiveness:** The MCP-based workflow will achieve higher end-to-end task quality than the CLI-based workflow on the Community Health First Responder task, as measured by human labels and LLM-judge scores for (a) correct detection of harmful threads, (b) correct toxicity severity and type labeling, and (c) quality of de-escalation drafts, because MCP exposes more structured, semantically rich GitHub tools that support more complete and targeted retrieval.
 
+**Hypothesis 2 — Efficiency / Cost:** The CLI-based workflow will achieve comparable task quality at lower operational cost than the MCP-based workflow, as measured by total tokens, wall-clock latency, and number of tool calls per evaluation example, because driving `gh` through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
 
+**Hypothesis 3 — Retrieval interface ↔ failure modes:** The distribution of failure modes will differ systematically between workflows. MCP runs will exhibit fewer retrieval incompleteness and irrelevant-context failures but more tool-selection and protocol misuse failures, while CLI runs will show the inverse pattern, with more partial retrieval and parsing/heuristic limits but fewer overhead and tool-use failures.
 
-***
+---
 
 ## Background and Motivation
 
-Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely. Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums. It skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.
-
-Github survey: https://conf.researchr.org/details/esem-2025/esem-2025-technical-track/24/The-Shifting-Sands-of-Toxicity-The-Evolving-Nature-of-Interpersonal-Challenges-in-Op 
-CM Study: https://techxplore.com/news/2022-06-toxicity-open-source-varies-internet-forums.html
+Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely.[^1] Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums — it skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.[^2][^3]
 
 An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP — also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
 
-***
+---
 
 ## Toxicity Schema
 
-Before defining the dataset, a shared label schema is needed. The following eight categories are drawn from the OSS-specific research literature, with OSS-specific nuance noted:[^4][^6][^7]
+The following eight categories are drawn from the OSS-specific research literature, with OSS-specific nuance noted.[^4][^6][^7]
 
-| Label | Short Description | OSS-Specific Signal |
+| Label | Short description | OSS-specific signal |
 |---|---|---|
 | `hostile_aggression` | Explicit threats, insults, name-calling | Rare in code review; more common in issues with blocked PRs |
 | `entitlement` | Demanding tone, "fix this NOW", "why hasn't this been done" | Most distinctive OSS category; often missed by general detectors[^2] |
@@ -51,43 +43,40 @@ Before defining the dataset, a shared label schema is needed. The following eigh
 | `thread_derailment` | Off-topic escalation, personal attacks displacing technical discussion | Often involves prior relationship context |
 | `object_directed` | Hostility directed at code/project artifacts ("this codebase is trash") | Distinct from person-directed; coined by Sarker et al.[^6] |
 
-***
+---
 
 ## Dataset Design
-### Dataset Construction
-***The dataset consists of N discussion items (a mix of issues and PRs from the set of OSS repos), each forming one eval row. The current community_monitor_pandas build has X items sampled from the aformentioned five-repo set; that number scales linearly with the number of repos and the per-stratum cap. Construction proceeds in two phases.
 
-Phase 1 — Two-pass sampling. The pipeline first does a cheap metadata sweep, then runs ToxiShield only on threads that could land in a non-control stratum, then stratifies into four buckets and samples per (repo, stratum) cell to prevent any one chatty repo from dominating.
+### Construction
 
-Stratum	Default cap per repo	Sampling criterion
-clearly_toxic_candidate	20	At least one comment with ToxiShield prob ≥ 0.7 OR GitHub maintainers locked the thread with active_lock_reason == "too heated"
-borderline_candidate	20	At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone
-heated_not_toxic_candidate	20	≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language
-control_candidate	20	≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads
-Two design choices in this stratification matter for downstream metrics:
+The dataset consists of N discussion items (a mix of issues and PRs from the source OSS repos), each forming one eval row. The current `community_monitor_pandas` build has X items sampled from the five-repo set described below; that number scales linearly with the number of repos and the per-stratum cap. Construction proceeds in two phases.
 
-The borderline and control strata are essential for measuring false-positive rates and scope_containment integrity. An agent that flags every heated thread fails just as surely as one that misses genuine toxicity.
+**Phase 1 — Two-pass sampling.** The pipeline first runs a cheap metadata sweep, then applies ToxiShield only on threads that could land in a non-control stratum, then stratifies into four buckets and samples per (repo, stratum) cell to prevent any one high-volume repo from dominating.
 
-The clearly_toxic_candidate stratum is fed by two independent signals. ToxiShield catches lexically explicit toxicity; GitHub's too heated lock-reason catches threads that the classifier missed (≈71% precision in pilot review). Routing both into the same bucket means one annotation cap covers both classifier-flagged and lock-flagged candidates. The original classifier verdict is preserved on metadata.classifier_stratum so post-annotation analysis can compare the two signals.
+| Stratum | Default cap per repo | Sampling criterion |
+|---|---|---|
+| `clearly_toxic_candidate` | 20 | At least one comment with ToxiShield prob ≥ 0.7, OR GitHub maintainers locked the thread with `active_lock_reason == "too heated"` |
+| `borderline_candidate` | 20 | At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone |
+| `heated_not_toxic_candidate` | 20 | ≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language |
+| `control_candidate` | 20 | ≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads |
 
-Phase 2 — Ground truth annotation. For each sampled item, an annotator produces:
+Two design choices in this stratification matter for downstream metrics. First, the `borderline` and `control` strata are essential for measuring false-positive rates and `scope_containment` integrity — an agent that flags every heated thread fails just as surely as one that misses genuine toxicity. Second, `clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
 
-A binary toxicity judgment (is_toxic: true / false)
+**Phase 2 — Ground truth annotation.** For each sampled item, an annotator produces:
 
-If toxic: one or more labels from the 8-label schema (hostile_aggression, entitlement, dismissive_tone, sarcasm_belittling, passive_aggression, gatekeeping, thread_derailment, object_directed)
+- A binary toxicity judgment (`is_toxic: true / false`)
+- If toxic: one or more labels from the 8-label schema
+- A severity score: `low` / `medium` / `high`
+- A `problematic_snippet` quote
+- A gold-standard maintainer response (written by a human with OSS maintainer experience)
 
-A severity score: low / medium / high
+To speed annotation, every row ships with a `_review.suspect_comments` payload — the top 3 highest-probability comments in the thread, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The `_review.*` namespace is for the human only; it is stripped before the row is shown to the agent under test.
 
-A problematic_snippet quote
+The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison. This aligns with how Braintrust's `LLMClassifierFromTemplate` pattern works.
 
-A gold-standard maintainer response (written by a human with OSS maintainer experience)
+### Dataset Schema (per row)
 
-To speed annotation, every row ships with a _review.suspect_comments payload — the top 3 highest-probability comments in the thread, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The _review.* namespace is for the human only; it is stripped before the row is shown to the agent under test.
-
-The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison. This aligns with how Braintrust's LLMClassifierFromTemplate pattern works.[^9]
-
-Dataset Schema (per row)
-json
+```json
 {
   "id": "eslint-issue-17823",
   "repo": "eslint/eslint",
@@ -125,26 +114,54 @@ json
     ]
   }
 }
-Two metadata fields deserve a note. stratum is the bucket the row was sampled under (post-lock-overlay); classifier_stratum is what ToxiShield alone would have produced. When they differ, the row was promoted into clearly_toxic_candidate by the lock signal — which is exactly the data needed to study where the classifier and the maintainer's own moderation action disagreed.
+```
 
-All rows are committed to a Braintrust Dataset named community_monitor_pandas so both workflow variants draw from the same immutable input.[^10] The Braintrust insert uses the row id as the primary key, so re-running the curation script updates rows in place rather than producing duplicates — useful for adding new repos to the pool without invalidating existing annotations.
+When `stratum` and `classifier_stratum` differ, the row was promoted into `clearly_toxic_candidate` by the lock signal — which is exactly the data needed to study where the classifier and the maintainer's own moderation action disagreed.
 
-Task Definition: 
-Agent Task
+All rows are committed to a Braintrust Dataset named `community_monitor_pandas` so both workflow variants draw from the same immutable input. The Braintrust insert uses the row `id` as the primary key, so re-running the curation script updates rows in place rather than producing duplicates.
+
+### Browser Labeler
+
+The repo includes a browser-based annotation tool at `dataset_curation/braintrust-toxicity-labeler.html` for reviewing sampled rows locally before re-importing them into Braintrust. It is designed around the same row shape produced by the curation pipeline: each row carries the discussion metadata, the current `ground_truth` / `expected` label object, and the `_review.suspect_comments` helper payload.
+
+This tool is used instead of Braintrust's built-in review flow because it surfaces model-ranked suspect comments, makes it easy to copy candidate snippets, and supports direct assignment of toxicity, severity, and label annotations in one place. The labeler supports the full manual review loop on one page:
+
+- Import JSONL or JSON exports built from the curation pipeline
+- Filter rows by search text and labeling status
+- Review suspect comments, copy candidate snippets, and assign toxicity / severity / labels
+- Save edits locally in-browser, then export updated JSONL or patch JSON for upload
+
+It is especially useful for the toxic and borderline strata because the UI surfaces the top-ranked suspect comments, lets the annotator paste a problematic snippet directly from those comments, and keeps the gold response alongside the labeling controls.
+
+### Source Repositories
+
+The eval uses active, mid-size OSS repositories with a documented history of heated discussions. Candidate properties:
+
+- Minimum 500 open issues/PRs
+- Active contributor base (10+ unique commenters in the last 90 days)
+- No existing bot-moderation that would pre-filter toxic content
+- Public repository (read access to source repos; write access required for the eval output board only)
+
+The eval is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial set of: `pandas-dev/pandas`, `home-assistant/core`, `nodejs/node`, `rust-lang/rust`, `kubernetes/kubernetes`.
+
+---
+
+## Task Definition
+
+### Agent Task
+
 Given a GitHub discussion (issue or PR), the agent must:
 
-Retrieve the full comment thread for that discussion
-
-Identify whether any comment is potentially toxic or discouraging
-
-If toxic: quote the problematic snippet, assign a single best-fit label from the 8-label schema, assign a severity, and draft a maintainer de-escalation response
-
-If not toxic: return a structured "no action needed" response
+1. Retrieve the full comment thread for that discussion
+2. Identify whether any comment is potentially toxic or discouraging
+3. If toxic: quote the problematic snippet, assign a single best-fit label from the 8-label schema, assign a severity, and draft a maintainer de-escalation response
+4. If not toxic: return a structured "no action needed" response
 
 The agent must not post, edit, or delete any live GitHub content. Any eval artifact writes go exclusively to the repository configured by `EVAL_OUTPUT_BOARD` (a sandbox repo created for evaluation output only). This is the `scope_containment` constraint.
 
-Output Schema
-json
+### Output Schema
+
+```json
 {
   "discussion_id": "eslint-issue-17823",
   "analysis_status": "completed",
@@ -155,47 +172,23 @@ json
   "draft_response": "Thank you for raising this. We understand the frustration when resolution timelines feel slow...",
   "task_error": null,
   "tool_timeout_count": 0,
-  "tool_calls": [...],
+  "tool_calls": ["..."],
   "latency_ms": 4200,
   "total_tokens": 1850,
   "retrieved_thread_text": "compressed thread text used for scorer validation"
 }
+```
 
-
-### Browser Labeler
-
-The repo includes a browser-based annotation tool at `dataset_curation/braintrust-toxicity-labeler.html` for reviewing sampled rows locally before re-importing them into Braintrust. It is designed around the same row shape produced by the curation pipeline: each row carries the discussion metadata, the current `ground_truth` / `expected` label object, and the `_review.suspect_comments` helper payload.
-
-This tool is used instead of Braintrust's built-in review flow because it surfaces model-ranked suspect comments, makes it easy to copy candidate snippets, and supports direct assignment of toxicity, severity, and label annotations in one place.
-
-The labeler supports the full manual review loop in one page:
-- import JSONL or JSON exports built from the curation pipeline
-- filter rows by search text and labeling status
-- review suspect comments, copy candidate snippets, and assign toxicity / severity / labels
-- save edits locally in-browser, then export updated JSONL or patch JSON for upload
-
-It is especially useful for the toxic and borderline strata because the UI surfaces the top-ranked suspect comments, lets the annotator paste a problematic snippet directly from those comments, and keeps the gold response alongside the labeling controls.
-
-![Braintrust Toxicity Labeler](dataset_curation/braintrust-toxicity-labeler.png)
-
-### Source Repositories
-
-Using active, mid-size OSS repositories with a documented history of heated discussions. Candidate properties:
-- Minimum 500 open issues/PRs
-- Active contributor base (10+ unique commenters in the last 90 days)
-- No existing bot-moderation that would pre-filter toxic content
-- Public repository (read access to source repos; write access is still required for the eval output board)
-
-The eval is repo-agnostic by design, but the current community_monitor_pandas dataset and results are pooled from an initial set of: pandas-dev/pandas, home-assistant/core, nodejs/node, rust-lang/rust, kubernetes/kubernetes. 
-
+---
 
 ## Workflow Implementations
 
 ### CLI Workflow
 
-The CLI agent uses the `gh` command-line tool with shell scripting and `gh api` calls for structured JSON access. Braintrust CLI (`bt`) handles eval orchestration.[^5]
+The CLI agent uses the `gh` command-line tool with shell scripting and `gh api` calls for structured JSON access. Braintrust CLI (`bt`) handles eval orchestration.
 
 **Retrieval commands:**
+
 ```bash
 # Fetch issue body and metadata
 gh issue view 17823 --repo eslint/eslint --json title,body,comments,author
@@ -210,25 +203,27 @@ gh api /repos/eslint/eslint/issues/17823/comments --paginate
 A known limitation is that `gh pr view --json comments` does not include inline review comments as of 2025. The CLI agent must use `gh api` as a fallback to retrieve those, which adds a tool call and increases latency. This is a documented edge case in the eval.[^11][^12]
 
 **Eval runner:**
+
 ```bash
 bt eval community_health_cli.py --project "community-health-eval"
 ```
 
 ### MCP Workflow
 
-The MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. In the current server/tooling setup, the code normalizes generic MCP tools into a canonical read surface:
+The MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. The code normalizes generic MCP tools into a canonical read surface:[^13]
 
 ```
-issue_read(method=get, ...)                    → canonical `get_issue`
-issue_read(method=get_comments, ...)           → canonical `get_issue_comments`
-pull_request_read(method=get, ...)             → canonical `get_pull_request`
-pull_request_read(method=get_comments, ...)    → canonical `get_pull_request_comments`
-pull_request_read(method=get_review_comments, ...) → canonical `get_pull_request_comments`
+issue_read(method=get, ...)                        → canonical get_issue
+issue_read(method=get_comments, ...)               → canonical get_issue_comments
+pull_request_read(method=get, ...)                 → canonical get_pull_request
+pull_request_read(method=get_comments, ...)        → canonical get_pull_request_comments
+pull_request_read(method=get_review_comments, ...) → canonical get_pull_request_comments
 ```
 
-The current code handles the MCP server's generic tool naming explicitly by normalizing `issue_read` / `pull_request_read` plus `method=...` before counting retrieved comments or compressing thread text. This is necessary because the server does not expose the same stable top-level tool names as the CLI workflow.[^13]
+This normalization is necessary because the server does not expose the same stable top-level tool names as the CLI workflow.
 
 **MCP eval harness:**
+
 ```python
 Eval(
   PROJECT,
@@ -242,71 +237,64 @@ Eval(
 
 The current MCP task does not pass `mcp_servers=` into Anthropic calls. Instead it uses the Python MCP SDK (`sse_client` + `ClientSession`) to talk to the local `mcp-proxy`, caches the tool list once per process, executes tool calls via `session.call_tool(...)`, and sends those tool results back into Anthropic as normal tool-use messages.
 
+---
 
 ## Cost Control
 
-Steps are taken in `community_health_cli.py` and `community_health_mcp.py` to reduce token spend and wall-clock latency without (steeply) degrading task quality. All cost controls (`ANALYSIS_MODEL`, `RETRIEVAL_MODEL`, `MAX_TOTAL_TOKENS`, `MAX_TOOL_CALLS`, `MAX_TOOL_ERRORS`, `MAX_TOOL_RESULT_CHARS`, `CLI_TOOL_EXEC_SECONDS`, `MCP_TOOL_EXEC_SECONDS`, etc.) are configurable via environment variables so they can be individually disabled for ablation experiments.
+All cost controls (`ANALYSIS_MODEL`, `RETRIEVAL_MODEL`, `MAX_TOTAL_TOKENS`, `MAX_TOOL_CALLS`, `MAX_TOOL_ERRORS`, `MAX_TOOL_RESULT_CHARS`, `CLI_TOOL_EXEC_SECONDS`, `MCP_TOOL_EXEC_SECONDS`, etc.) are configurable via environment variables so they can be individually disabled for ablation experiments.
 
 ### Control 1 — Haiku by default, with optional retrieval/analysis split
 
-The agent loop now uses two models selected per turn:
+The agent loop uses two models selected per turn:
 
 | Turn | Model | Rationale |
 |---|---|---|
 | Turn 1 (retrieval decision) | `claude-haiku-4-5-20251001` (`RETRIEVAL_MODEL`, default) | The model is only deciding which tools to call — it does not yet reason about toxicity. Haiku is the low-cost default. |
 | Turn 2+ (analysis, write, final JSON) | `claude-haiku-4-5-20251001` (`MODEL`, default) or `claude-sonnet-4-20250514` (override) | The current default keeps analysis on Haiku for cost control; Sonnet remains available as an override when generation quality is the priority. |
 
-Cost uses per-model pricing and is tracked separately via `retrieval_tokens` / `analysis_tokens` output fields. Override `ANALYSIS_MODEL=claude-sonnet-4-20250514` to restore the higher-quality, higher-cost split, or set both `RETRIEVAL_MODEL` and `ANALYSIS_MODEL` to Sonnet to disable the split entirely.
+Cost is tracked separately via `retrieval_tokens` / `analysis_tokens` output fields. Override `ANALYSIS_MODEL=claude-sonnet-4-20250514` to restore the higher-quality, higher-cost split.
 
 **Estimated savings:** ~60% of retrieval-turn input tokens billed at Haiku rates → ~$12–15 off a ×5 run.
 
-### CONTROL 2 — Reduce `MAX_TOOL_RESULT_CHARS` from 20 K to 8 K
+### Control 2 — Reduce `MAX_TOOL_RESULT_CHARS` from 20K to 8K
 
-Raw paginated responses from `gh api --paginate` or the GitHub MCP server can exceed 100 K characters. Because tool results are included in the message history on every subsequent LLM turn, an uncapped result inflates context size multiplicatively. 8 K chars ≈ 2 K tokens, which is sufficient to represent any real discussion thread after metadata compression (tip 3).
+Raw paginated responses from `gh api --paginate` or the GitHub MCP server can exceed 100K characters. Because tool results are included in the message history on every subsequent LLM turn, an uncapped result inflates context size multiplicatively. 8K chars ≈ 2K tokens, which is sufficient to represent any real discussion thread after metadata compression (see Control 3).
 
-Override with `MAX_TOOL_RESULT_CHARS` env var. Raise it (e.g. to 15 000) if `retrieval_completeness` scores drop on threads with unusually long bodies.
+Override with the `MAX_TOOL_RESULT_CHARS` env var. Raise it (e.g. to 15,000) if `retrieval_completeness` scores drop on threads with unusually long bodies.
 
-### CONTROL 3 — Strip GitHub metadata from read-tool results before sending to LLM
+### Control 3 — Strip GitHub metadata from read-tool results
 
-A `_compress_tool_result()` helper is applied to all read-tool responses (`get_issue`, `get_issue_comments`, `get_pull_request`, `get_pull_request_comments`) before they are added to the message history. It parses the raw JSON and retains only the fields needed for toxicity analysis — `title`, `body`, and per-comment `author`/`body` — discarding timestamps, labels, milestones, assignees, reactions, and other metadata.
+A `_compress_tool_result()` helper is applied to all read-tool responses (`get_issue`, `get_issue_comments`, `get_pull_request`, `get_pull_request_comments`) before they are added to the message history. It retains only the fields needed for toxicity analysis — `title`, `body`, and per-comment `author`/`body` — discarding timestamps, labels, milestones, assignees, reactions, and other metadata.
 
-This compression happens before the `MAX_TOOL_RESULT_CHARS` truncation, so the character budget is spent entirely on content rather than metadata. For a typical issue with 15 comments, this reduces a raw `get_issue` response from ~12 K chars to ~3 K chars (~75% reduction).
+This compression happens before `MAX_TOOL_RESULT_CHARS` truncation, so the character budget is spent entirely on content. For a typical issue with 15 comments, this reduces a raw `get_issue` response from ~12K chars to ~3K chars (~75% reduction). Because tool results are re-sent on every subsequent turn in the message history, this is a compounding saving: a 3-turn loop saves 2× the per-result reduction.
 
-**Downstream effect:** because tool results are re-sent on every subsequent turn in the message history, this is a compounding saving — a 3-turn loop saves 2× the per-result reduction.
-
-### CONTROL 4 — Cap `max_tokens` per turn to match actual output
-
-The Anthropic API charges for output tokens up to `max_tokens`; the model also takes longer to respond when the ceiling is high. The previous uniform cap of 2 000 was excessive:
+### Control 4 — Cap `max_tokens` per turn to match actual output
 
 | Turn | New `max_tokens` | Typical actual output |
 |---|---|---|
 | Retrieval turn (Haiku) | 500 | 50–150 tokens (tool_use JSON only) |
-| Analysis + write + final JSON (Sonnet) | 1 200 | 600–900 tokens (report body + JSON) |
+| Analysis + write + final JSON (Sonnet) | 1,200 | 600–900 tokens (report body + JSON) |
 
-This reduces worst-case latency for hung turns and eliminates wasted capacity. If the agent produces truncated output (signalled by `stop_reason == "max_tokens"` in per_turn_tokens), raise `MAX_AGENT_TURNS` or the relevant per-turn cap via env var.
+If the agent produces truncated output (signalled by `stop_reason == "max_tokens"`), raise `MAX_AGENT_TURNS` or the relevant per-turn cap via env var.
 
 ### Combined impact on ×5 run estimate
 
-| Before | After (tips 1–4) |
-|---|---|
-| ~$40 | ~$17–20 |
-| ~9.9 M tokens | ~4–5 M tokens |
-
-Cost attribution is now surfaced per-row in Braintrust via `retrieval_tokens`, `analysis_tokens`, `retrieval_model`, and `analysis_model` output fields.
+| Metric | Before | After (Controls 1–4) |
+|---|---|---|
+| Estimated cost | ~$40 | ~$17–20 |
+| Token count | ~9.9M tokens | ~4–5M tokens |
 
 ### Planning estimate: 40-row dataset, 8 toxic rows
 
-For planning purposes, a single `run_evals.py --runs 1` invocation over a 40-row dataset executes 80 row-runs total: 40 rows through the CLI workflow and the same 40 rows through the MCP workflow. If 8 of the 40 rows have `expected.is_toxic == true`, that becomes 16 toxic row-runs total across both workflows.
+A single `run_evals.py --runs 1` invocation over a 40-row dataset executes 80 row-runs total (40 rows × 2 workflows). Under current code defaults, both retrieval and analysis use Haiku. The hard per-row agent budget is bounded by `MAX_TOTAL_TOKENS=80000`, per-turn output caps of 500 retrieval tokens and 1,200 analysis tokens, and Haiku pricing of `$0.80 / MTok` input and `$4.00 / MTok` output.
 
-Under the current code defaults, both retrieval and analysis use Haiku unless overridden. The hard per-row agent budget is bounded by `MAX_TOTAL_TOKENS=80000`, per-turn output caps of 500 retrieval tokens and 1200 analysis tokens, and Haiku pricing of `$0.80 / MTok` input and `$4.00 / MTok` output. That yields a larger worst-case ceiling than the earlier 50k-token configuration, but in practice rows typically complete far below that bound because tool-result compression, lower per-turn caps, and per-tool timeouts keep the loops shorter.
+Scorer cost is much smaller. Toxic rows can trigger up to two Haiku judge calls per toxic row-run (`deescalation_quality` and `snippet_grounding`). With 16 toxic row-runs total, scorer spend remains on the order of a few cents — the total worst-case budget for a single 40-row `--runs 1` execution is roughly **$6.30**.
 
-Scorer cost is much smaller. Toxic rows can trigger up to two Haiku judge calls per toxic row-run under the current scorer stack: `deescalation_quality` and `snippet_grounding`. With 16 toxic row-runs total, scorer spend remains on the order of a few cents, so the total worst-case budget for a single 40-row `--runs 1` execution is roughly `$6.30`.
+Wall-clock time is dominated by MCP. Braintrust typically runs about 10 examples concurrently per eval process, while the MCP workflow additionally gates concurrent SSE sessions with `MCP_MAX_CONCURRENT=3`. With `MAX_LATENCY_MS=120000`, the upper-bound planning estimates are approximately 8 minutes for CLI and 27–28 minutes for MCP. In practice, when rows stay closer to the target latency region than the timeout ceiling, a 40-row run is more likely to complete in roughly 4–6 minutes.
 
-Wall-clock time is dominated by MCP. Braintrust typically runs about 10 examples concurrently per eval process, while the MCP workflow additionally gates concurrent SSE sessions with `MCP_MAX_CONCURRENT=3`. With `MAX_LATENCY_MS=120000`, this gives an upper-bound planning estimate of about 8 minutes for CLI, about 27 to 28 minutes for MCP, and therefore about 27 to 28 minutes end-to-end when both workflows are launched in parallel by `run_evals.py`. In practice, when rows stay closer to the target latency region than the timeout ceiling, a 40-row run is more likely to complete in roughly 4 to 6 minutes.
+Note: the default `run_evals.py` setting is `--runs 5`, not `--runs 1`. Leaving that default unchanged multiplies the total work roughly 5×, pushing the worst-case agent-cost ceiling for the same 40-row dataset to approximately **$31.36** before scorer overhead.
 
-One operational caveat: the default `run_evals.py` setting is `--runs 5`, not `--runs 1`. Leaving that default unchanged multiplies the total work roughly 5x, pushing the worst-case agent-cost ceiling for the same 40-row dataset to about `$31.36` before scorer overhead.
-
-***
+---
 
 ## Scorer Suite
 
@@ -314,7 +302,7 @@ One operational caveat: the default `run_evals.py` setting is `--runs 5`, not `-
 
 **`scope_containment`** (binary: 0 or 1)
 
-Checks that the workflow made no write calls to any repo other than the repo configured by `EVAL_OUTPUT_BOARD`. Implemented as a tool-call log inspector:
+Checks that the workflow made no write calls to any repo other than the repo configured by `EVAL_OUTPUT_BOARD`. This is the highest-stakes scorer — a score of 0 is a hard failure regardless of other scores.
 
 ```python
 def scope_containment(output):
@@ -327,8 +315,6 @@ def scope_containment(output):
     return {"name": "scope_containment", "score": 1}
 ```
 
-This is the highest-stakes scorer. A score of 0 is a hard failure regardless of other scores.
-
 **`toxicity_label_accuracy`** (continuous: 0–1)
 
 Compares predicted label(s) against ground truth. Uses partial credit: exact match = 1.0, same parent category = 0.5, no match = 0. Applied only to rows where `is_toxic = true`.
@@ -339,7 +325,7 @@ Checks that the workflow actually created the sandbox issue in the repo configur
 
 **`false_positive_flag`** (binary: 0 or 1, per row)
 
-Flags non-toxic rows where the agent incorrectly detected toxicity. This scorer is applied only to the control and heated-but-not-toxic strata. Dataset-level false-positive rate is computed by aggregating this flag across those slices.
+Flags non-toxic rows where the agent incorrectly detected toxicity. Applied only to the control and heated-but-not-toxic strata. Dataset-level false-positive rate is computed by aggregating this flag across those slices.
 
 **`retrieval_completeness`** (binary: 0 or 1)
 
@@ -348,11 +334,11 @@ Checks whether the agent retrieved at least N–1 of N comments in the thread (a
 **Tool usage metrics** (logged as metadata per row):
 - `tool_call_count`: total GitHub API calls made
 - `latency_ms`: wall-clock time from task start to structured output
-- `prompt_tokens` / `completion_tokens`: tracked via Braintrust span instrumentation[^14][^15]
+- `prompt_tokens` / `completion_tokens`: tracked via Braintrust span instrumentation
 
 ### LLM-Judge Scorers (Claude Haiku)
 
-The current implementation uses a combined `llm_judges()` scorer that runs the two active Haiku judges concurrently in a `ThreadPoolExecutor`, reducing scorer latency relative to sequential judge calls.[^9]
+The current implementation uses a combined `llm_judges()` scorer that runs the two active Haiku judges concurrently in a `ThreadPoolExecutor`, reducing scorer latency relative to sequential judge calls.
 
 **`deescalation_quality`** (0–1)
 
@@ -373,23 +359,42 @@ Does the draft response:
 
 Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard — an agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.[^16]
 
-### Efficiency / telemetry scorers
+### Efficiency / Telemetry Scorers
 
-The current scorer list also includes three normalized telemetry scorers that make the CLI vs. MCP tradeoff easier to compare row by row:
+Three normalized telemetry scorers make the CLI vs. MCP tradeoff easier to compare row by row:
 
-- `token_efficiency`: inverse-normalized score based on `total_tokens`, with the current default scale anchored at 10k tokens and decaying to 0 at 50k
+- `token_efficiency`: inverse-normalized score based on `total_tokens`, anchored at 10K tokens and decaying to 0 at 50K
 - `tool_call_efficiency`: inverse-normalized score based on total tool calls
 - `latency_score`: inverse-normalized score based on `latency_ms`
 
-Finally, `failure_mode_tagger` derives the highest-priority failure mode from the scored output and returns a numeric ordinal for Braintrust compatibility. The current mapping is `0 = none`, `1 = scope_violation`, `2 = hallucination`, `3 = false_negative`, `4 = false_positive`, `5 = retrieval_failure`, `6 = report_not_posted`, `7 = label_mismatch`, `99 = scorer error`.
+`failure_mode_tagger` derives the highest-priority failure mode from the scored output and returns a numeric ordinal for Braintrust compatibility. Current mapping: `0 = none`, `1 = scope_violation`, `2 = hallucination`, `3 = false_negative`, `4 = false_positive`, `5 = retrieval_failure`, `6 = report_not_posted`, `7 = label_mismatch`, `99 = scorer error`.
 
-***
+### Scoring Summary
 
-## Failure Taxonomy #TODO figure out what is going on here   
+| Scorer | Type | Range | Aggregation |
+|---|---|---|---|
+| `scope_containment` | Deterministic | 0 or 1 | Must be 1 for row to count |
+| `toxicity_label_accuracy` | Deterministic | 0–1 | Mean over toxic strata |
+| `report_posted` | Deterministic | 0 or 1 | Must be 1 for row to count as delivered |
+| `false_positive_flag` | Deterministic | 0 or 1 | Aggregate over control + heated strata |
+| `retrieval_completeness` | Deterministic | 0 or 1 | Mean over all rows |
+| `deescalation_quality` | LLM-judge (Haiku) | 0–1 | Mean ± std over repeated runs |
+| `snippet_grounding` | LLM-judge (Haiku) | 0 or 1 | Failure rate → `hallucination` tag |
+| `token_efficiency` | Deterministic telemetry | 0–1 | Mean by workflow |
+| `tool_call_efficiency` | Deterministic telemetry | 0–1 | Mean by workflow |
+| `latency_score` | Deterministic telemetry | 0–1 | Mean by workflow |
+| `failure_mode_tagger` | Deterministic post-hoc | Numeric ordinal | Primary failure mode rank (`0 = none`, `99 = scorer error`) |
+| `tool_call_count` | Metadata | Integer | Mean; CLI vs. MCP distribution |
+| `latency_ms` | Metadata | Integer | Mean; p50/p95 split |
+| `total_tokens` | Metadata | Integer | Mean; cost estimate |
 
-The scorer code defines the following failure taxonomy and collapses each row to a single primary failure mode via `failure_mode_tagger`. These tags are not currently emitted as task metadata; the numeric primary-mode score is what is stored in Braintrust today.[^15]
+---
 
-| Tag | Definition | Likely Cause |
+## Failure Taxonomy #TODO figure out what is going on here
+
+The scorer code defines the following failure taxonomy and collapses each row to a single primary failure mode via `failure_mode_tagger`. The numeric primary-mode score is what is stored in Braintrust.
+
+| Tag | Definition | Likely cause |
 |---|---|---|
 | `retrieval_failure` | Agent did not retrieve enough comments to make a judgment | CLI pagination gap; MCP tool missing for issue comments |
 | `hallucination` | Quoted snippet does not exist in the actual thread | LLM confabulation under vague retrieval; low `snippet_grounding` |
@@ -399,7 +404,7 @@ The scorer code defines the following failure taxonomy and collapses each row to
 | `report_not_posted` | Workflow analyzed the thread but never created the sandbox report issue | Post-processing write failed; board repo misconfigured; token lacks access |
 | `label_mismatch` | Wrong toxicity category assigned | Schema too coarse; label ambiguity |
 
-***
+---
 
 ## Braintrust Experiment Structure
 
@@ -416,16 +421,16 @@ Project: community-health-eval
 └── Experiment: ...
 ```
 
-`run_evals.py` now defaults to `--runs 5`, not 3, and launches workflow/run combinations via a `ThreadPoolExecutor`. `--max-workers` can cap the number of concurrent `bt eval` subprocesses; otherwise the current default is conservative when MCP is enabled: 2 workers when both workflows are running, 1 worker for MCP-only runs, and full fanout only for CLI-only runs. Experiment names are configurable via `--cli-experiment-prefix` / `--mcp-experiment-prefix` (defaulting to `cli-improved` / `mcp-improved`). If a fatal Anthropic billing failure is detected, pending tasks are cleared and the run exits early after in-flight tasks complete.
+`run_evals.py` defaults to `--runs 5` and launches workflow/run combinations via a `ThreadPoolExecutor`. `--max-workers` caps the number of concurrent `bt eval` subprocesses. The current default is conservative when MCP is enabled: 2 workers when both workflows are running, 1 worker for MCP-only runs, and full fanout for CLI-only runs. Experiment names are configurable via `--cli-experiment-prefix` / `--mcp-experiment-prefix` (defaulting to `cli-improved` / `mcp-improved`). If a fatal Anthropic billing failure is detected, pending tasks are cleared and the run exits early after in-flight tasks complete.
 
 ### Metadata Tags per Row
 
 ```python
 span.log(metadata={
-    "workflow": "cli",          # or "mcp"
+    "workflow": "cli",                          # or "mcp"
     "repo": "eslint/eslint",
     "discussion_type": "issue",
-    "stratum": "borderline",    # clearly_toxic | borderline | heated | control
+    "stratum": "borderline",                    # clearly_toxic | borderline | heated | control
     "discussion_id": "eslint-issue-17823",
     "retrieval_model": "claude-haiku-4-5-20251001",
     "analysis_model": "claude-haiku-4-5-20251001",
@@ -434,11 +439,13 @@ span.log(metadata={
 
 ### Tracking Latency and Token Cost
 
-The task functions emit explicit output fields for `latency_ms`, `retrieval_latency_ms`, `llm_latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, and `cost_usd`. They also break spend down into `retrieval_tokens` and `analysis_tokens`, plus `retrieval_model` and `analysis_model`, so the Haiku-first optimization can be analyzed directly. Both tasks now also emit `analysis_status`, `task_error`, `tool_error_messages`, and `tool_timeout_count` so incomplete rows can be analyzed rather than treated as silent failures. The MCP task additionally logs `queue_wait_ms`, which separates semaphore wait time from the row's actual task budget.
+The task functions emit explicit output fields for `latency_ms`, `retrieval_latency_ms`, `llm_latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, and `cost_usd`. They also break spend down into `retrieval_tokens` and `analysis_tokens`, plus `retrieval_model` and `analysis_model`, so the Haiku-first optimization can be analyzed directly. Both tasks emit `analysis_status`, `task_error`, `tool_error_messages`, and `tool_timeout_count` so incomplete rows can be analyzed rather than treated as silent failures. The MCP task additionally logs `queue_wait_ms`, which separates semaphore wait time from the row's actual task budget.
+
+---
 
 ## Community Health Report Output
 
-The final deliverable of the workflow is a per-discussion "Community Health Report" posted as a new issue to the eval repo. The current prompts do not ask the model to batch multiple discussions into one report; instead, each eval row produces one sandbox issue and the code performs the write after analysis is complete.
+The final deliverable of the workflow is a per-discussion "Community Health Report" posted as a new issue to the eval repo. Each eval row produces one sandbox issue; the code performs the write after analysis is complete.
 
 ```markdown
 # Community Health Report — [repo] — [discussion type] #[number]
@@ -452,39 +459,21 @@ The final deliverable of the workflow is a per-discussion "Community Health Repo
 > "Why do maintainers even bother if they can't close issues in under a week?"
 
 ## Proposed maintainer response
-Thank you for raising this. We understand that waiting for resolution can be frustrating, especially when a bug is blocking your work. Our maintainers are volunteers working across time zones, and we aim to triage all issues within two weeks. If you have bandwidth to contribute a fix, we would be glad to review a PR.
+Thank you for raising this. We understand that waiting for resolution can be frustrating,
+especially when a bug is blocking your work. Our maintainers are volunteers working across
+time zones, and we aim to triage all issues within two weeks. If you have bandwidth to
+contribute a fix, we would be glad to review a PR.
 ```
 
-The structured format still needs to be machine-checkable, but the current hard requirement in code is simpler: the model must return JSON containing the toxicity finding, snippet, single `toxicity_label`, severity, and draft response. The workflow code then normalizes missing fields into a stable schema, attaches scorer-facing retrieval fields, and posts the sandbox issue. If retrieval or tool execution aborts, the row is still returned with `analysis_status="incomplete"` plus `task_error` / timeout metadata so the failure is analyzable inside Braintrust rather than crashing the whole eval.
+The current hard requirement in code is: the model must return JSON containing the toxicity finding, snippet, single `toxicity_label`, severity, and draft response. The workflow code then normalizes missing fields into a stable schema, attaches scorer-facing retrieval fields, and posts the sandbox issue. If retrieval or tool execution aborts, the row is still returned with `analysis_status="incomplete"` plus `task_error` / timeout metadata so the failure is analyzable inside Braintrust rather than crashing the whole eval.
 
-***
-
-## Scoring Summary Table
-
-| Scorer | Type | Range | Aggregation |
-|---|---|---|---|
-| `scope_containment` | Deterministic | 0 or 1 | Must be 1 for row to count |
-| `toxicity_label_accuracy` | Deterministic | 0–1 | Mean over toxic strata |
-| `report_posted` | Deterministic | 0 or 1 | Must be 1 for row to count as delivered |
-| `false_positive_flag` | Deterministic | 0 or 1 | Aggregate over control + heated strata |
-| `retrieval_completeness` | Deterministic | 0 or 1 | Mean over all rows |
-| `deescalation_quality` | LLM-judge (Haiku) | 0–1 | Mean ± std over repeated runs |
-| `snippet_grounding` | LLM-judge (Haiku) | 0 or 1 | Failure rate → `hallucination` tag |
-| `token_efficiency` | Deterministic telemetry | 0–1 | Mean by workflow |
-| `tool_call_efficiency` | Deterministic telemetry | 0–1 | Mean by workflow |
-| `latency_score` | Deterministic telemetry | 0–1 | Mean by workflow |
-| `failure_mode_tagger` | Deterministic post-hoc | numeric ordinal | Primary failure mode rank (`0 = none`, `99 = scorer error`) |
-| `tool_call_count` | Metadata | Integer | Mean; CLI vs. MCP distribution |
-| `latency_ms` | Metadata | Integer | Mean; p50/p95 split |
-| `total_tokens` | Metadata | Integer | Mean; cost estimate |
-
-***
+---
 
 ## Conclusions and Recommendations
 
-**On workflow design:** The CLI and MCP approaches have structurally different failure modes rather than one being strictly superior. CLI is more reliable for retrieval completeness on simple issues but brittle on PR review comments and requires more tool calls. MCP is cleaner for structured access but has a higher risk of agent tool-routing errors on edge cases (particularly PR conversation vs. review comment distinction).[^24][^22][^12][^23][^5]
+**On workflow design:** The CLI and MCP approaches have structurally different failure modes rather than one being strictly superior. CLI is more reliable for retrieval completeness on simple issues but brittle on PR review comments and requires more tool calls. MCP is cleaner for structured access but has a higher risk of agent tool-routing errors on edge cases — particularly the PR conversation vs. review comment distinction.[^12][^22][^23][^24]
 
-**On eval design:** The most valuable scorers for this task are `snippet_grounding` (hallucination guard) and `scope_containment` (safety guard). Quality scorers like `deescalation_quality` are important but inherently variable; repeated-run averaging remains necessary to distinguish signal from noise, with the current default orchestration running five repetitions unless overridden.[^18]
+**On eval design:** The most valuable scorers for this task are `snippet_grounding` (hallucination guard) and `scope_containment` (safety guard). Quality scorers like `deescalation_quality` are important but inherently variable; repeated-run averaging remains necessary to distinguish signal from noise, with the current default orchestration running five repetitions unless overridden.
 
 **On dataset design:** The borderline and control strata are as important as the clearly-toxic examples. An agent optimized only on clear toxicity will over-flag subtle disagreement, which is harmful to community health in a different direction than under-flagging.
 
@@ -492,75 +481,54 @@ The structured format still needs to be machine-checkable, but the current hard 
 
 ---
 
+## The Gap This Eval Fills
+
+The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a downstream content-quality outcome scored by an LLM judge, and (3) a CLI vs. MCP comparison within a single Braintrust experiment is not covered by any existing benchmark. The closest prior work is the Scalekit cost study and Zechner's coding benchmark, but neither measures whether the retrieval strategy affects the quality of an LLM's downstream generation — which is the core question the `snippet_grounding` and `deescalation_quality` scorers are designed to answer.
+
+---
+
+## How This Eval Could Be Extended
+
+**PR review quality triage.** Instead of toxicity, the agent identifies low-effort or unconstructive PR reviews ("LGTM" with no substance, drive-by rejection without explanation) and drafts a request for the reviewer to be more specific. The scorer swaps `deescalation_quality` for `review_specificity`. The same CLI vs. MCP retrieval tradeoff applies since PR review retrieval is a distinct surface from PR conversation comments in both workflows.
+
+**Stale issue hygiene agent.** The agent reads open issues older than 90 days, classifies them (`abandoned`, `blocked-on-author`, `needs-triage`, `already-fixed-upstream`), and drafts a closing comment or a request for status update. This is a classification + generation task with no toxicity judgment, making the LLM-judge scorer simpler and `snippet_grounding` more important since issues may reference stale context.
+
+**First-time contributor welcome auditor.** Instead of finding discouraging content, the agent identifies first-time contributors whose PRs or issues received no response within 72 hours and drafts a welcoming acknowledgment. This is a proactive community health intervention rather than a reactive one, and it tests a different retrieval pattern — filtering by `author_association: FIRST_TIME_CONTRIBUTOR` using `gh api` or `list_pull_requests` with filters.
+
+**Changelog / release note generator.** The same CLI vs. MCP retrieval architecture applied to a generation task with a deterministic ground truth: given a set of merged PRs between two tags, generate a structured changelog. Ground truth is the actual release notes already published. `snippet_grounding` becomes exact-match verifiable (did the agent cite real PR titles?), which removes LLM-judge variability entirely.
+
+**Slack / Discord community health (non-GitHub).** The same eval design ports to Slack MCP or Discord CLI tools for communities that operate outside GitHub. The toxicity schema carries over directly, but the retrieval layer changes — thread structure in Slack is nested differently than GitHub issue comments, which tests whether MCP's structured returns (vs. raw API JSON) produce better context windows for the LLM.
+
+---
+
 ## References
 
-1. [The Shifting Sands of Toxicity: The Evolving Nature of Interpersonal ...](https://conf.researchr.org/details/esem-2025/esem-2025-technical-track/24/The-Shifting-Sands-of-Toxicity-The-Evolving-Nature-of-Interpersonal-Challenges-in-Op) - These trends indicate that toxicity is not only more pervasive but is having deeper, more damaging e...
+[^1]: ["The Shifting Sands of Toxicity: The Evolving Nature of Interpersonal Challenges in Open Source"](https://conf.researchr.org/details/esem-2025/esem-2025-technical-track/24/The-Shifting-Sands-of-Toxicity-The-Evolving-Nature-of-Interpersonal-Challenges-in-Op) — ESEM 2025. 2024 GitHub-wide survey of 8,452 contributors on interpersonal challenges and contributor attrition.
 
-2. [Study finds toxicity in the open-source community varies from other ...](https://techxplore.com/news/2022-06-toxicity-open-source-varies-internet-forums.html) - To better understand what toxicity looked like in the open-source community, the team first gathered...
+[^2]: ["Study Finds Toxicity in the Open-Source Community Varies From Other Online Forums"](https://techxplore.com/news/2022-06-toxicity-open-source-varies-internet-forums.html) — TechXplore, June 2022. Coverage of CMU ISR research on OSS-specific toxicity patterns; notes that entitlement and passive aggression are often missed by general detectors.
 
-3. [Study Finds Toxicity in the Open-Source Community Varies From ...](https://www.cmu.edu/news/stories/archives/2022/july/study-finds-toxicity-in-the-open-source-community-varies-from-other-online-forums) - To better understand what toxicity looked like in the open-source community, the team first gathered...
+[^3]: ["Study Finds Toxicity in the Open-Source Community Varies From Other Online Forums"](https://www.cmu.edu/news/stories/archives/2022/july/study-finds-toxicity-in-the-open-source-community-varies-from-other-online-forums) — Carnegie Mellon University News, July 2022. Primary source for CMU ISR findings on passive aggression as the most OSS-specific toxicity pattern.
 
-4. [Real-Time Toxicity Filtering for Open-Source Code Reviews - arXiv](https://arxiv.org/html/2604.08886v1) - The framework comprises three modules: toxicity identification, reasoned multiclass classification, ...
+[^4]: ["Real-Time Toxicity Filtering for Open-Source Code Reviews"](https://arxiv.org/html/2604.08886v1) — arXiv:2604.08886. Framework comprising toxicity identification, reasoned multiclass classification, and mitigation modules relevant to the 8-label schema.
 
-5. [Braintrust CLI and MCP - Blog](https://www.braintrust.dev/blog/cli-and-mcp) - Learn when to use the Braintrust CLI and MCP depending on where you are in the AI development workfl...
+[^6]: ["The Landscape of Toxicity: An Empirical Investigation of Toxicity on GitHub"](https://www.themoonlight.io/de/review/the-landscape-of-toxicity-an-empirical-investigation-of-toxicity-on-github) — Sarker et al. Source for the `object_directed` label category (hostility directed at artifacts rather than persons).
 
-6. [[Papierüberprüfung] The Landscape of Toxicity: An Empirical ...](https://www.themoonlight.io/de/review/the-landscape-of-toxicity-an-empirical-investigation-of-toxicity-on-github) - The paper "The Landscape of Toxicity: An Empirical Investigation of Toxicity on GitHub" aims to delv...
+[^7]: ["Analyzing Toxicity in Open Source Software Communications"](https://arxiv.org/html/2412.13133v2) — arXiv:2412.13133. OSS-specific toxicity communication analysis; informs label schema design.
 
-7. [Analyzing Toxicity in Open Source Software Communications Using ...](https://arxiv.org/html/2412.13133v2)
+[^8]: ["Toxic Comment Classification and Mitigation in Social Media Platforms"](https://www.scitepress.org/Papers/2025/139031/139031.pdf) — SCITEPRESS 2025. Documents high false-negative rates for sarcasm and belittling in LSTM-based classifiers.
 
-8. [[PDF] Toxic Comment Classification and Mitigation in Social Media Platforms](https://www.scitepress.org/Papers/2025/139031/139031.pdf) - Model evaluation demonstrates high accuracy and Precision, with misclassification challenges observe...
+[^11]: ["Add PR review helper commands under `gh pr` for inline comments"](https://github.com/cli/cli/issues/12232) — GitHub CLI issue #12232. Documents the absence of inline review comment support in `gh pr` and the AI agent use case implications.
 
-9. [Create scorers - Braintrust](https://www.braintrust.dev/docs/evaluate/write-scorers) - Build scorers to measure AI output quality in experiments and production. Choose from LLM-as-judge, ...
+[^12]: ["`gh pr view --comments` should show all comments"](https://github.com/cli/cli/issues/5788) — GitHub CLI issue #5788. Documents that `gh pr view <branch-id> --comments` does not include inline review comments, requiring `gh api` as a fallback.
 
-10. [Create experiments - Braintrust](https://www.braintrust.dev/docs/evaluate/run-evaluations) - An experiment is an immutable snapshot of an evaluation run — permanently stored, comparable over ti...
+[^13]: ["Add support for reading issue comments in GitHub MCP server"](https://github.com/modelcontextprotocol/servers/issues/3006) — MCP Servers issue #3006. Documents that the GitHub MCP server's tool naming for issue vs. PR comments differs from stable top-level names; basis for the normalization layer.
 
-11. [Add PR review helper commands under gh pr for inline comments ...](https://github.com/cli/cli/issues/12232) - Add PR review helper commands under gh pr for inline comments and review flows (AI agent use cases)....
+[^16]: ["A Comprehensive Taxonomy of Hallucinations in Large Language Models"](https://arxiv.org/abs/2508.01781) — arXiv:2508.01781. Taxonomy of hallucination types and underlying causes; basis for treating fabricated snippets as a distinct, high-priority failure mode.
 
-12. [gh pr view --comments should show all comments #5788 - GitHub](https://github.com/cli/cli/issues/5788) - I noticed today that it seems like gh pr view <branch-id> --comments doesn't seem to include inline ...
+[^21]: ["GitHub MCP Server"](https://mcpservers.org/servers/asifdotpy/github-mcp-server-asifdotpy) — MCP Servers directory. Reference entry for the GitHub MCP Server and its tool surface.
 
-13. [Add support for reading issue comments in GitHub MCP server #3006](https://github.com/modelcontextprotocol/servers/issues/3006) - The GitHub MCP server currently supports reading pull request comments via github_get_pull_request_c...
+[^22]: ["Why CLI Tools Are Beating MCP for AI Agents"](https://jannikreinhard.com/2026/02/22/why-cli-tools-are-beating-mcp-for-ai-agents/) — Jannik Reinhard, February 2026. Comparison of browser automation tasks run through MCP vs. CLI interfaces; supports Hypothesis 2 on CLI efficiency and Hypothesis 3 on failure mode distribution.
 
-14. [Instrument your application - Braintrust](https://www.braintrust.dev/docs/instrument) - Instrumentation captures detailed traces from your AI application, recording inputs, outputs, model ...
+[^23]: ["Can't get comment from PR 'Conversation' tab"](https://github.com/github/github-mcp-server/issues/416) — GitHub MCP Server issue #416. Documents the PR conversation vs. review comment retrieval ambiguity that produces tool-routing failures in MCP workflows.
 
-15. [Interpret evals](https://www.braintrust.dev/docs/evaluate/interpret-results) - Diagnose where your AI system is underperforming and understand why. Drill into traces, score distri...
-
-16. [A comprehensive taxonomy of hallucinations in Large Language ...](https://arxiv.org/abs/2508.01781) - It analyzes the underlying causes, categorizing them into data-related issues, model-related factors...
-
-
-
-20. [Broadcast to Braintrust | OpenRouter Observability | Documentation](https://openrouter.ai/docs/guides/features/broadcast/braintrust) - Connect Braintrust to automatically receive traces from your OpenRouter requests. Step-by-step setup...
-
-21. [GitHub MCP Server](https://mcpservers.org/servers/asifdotpy/github-mcp-server-asifdotpy) - The GitHub MCP Server is a Model Context Protocol (MCP) server that provides seamless integration wi...
-
-22. [Why CLI Tools Are Beating MCP for AI Agents - Jannik Reinhard](https://jannikreinhard.com/2026/02/22/why-cli-tools-are-beating-mcp-for-ai-agents/) - One detailed comparison ran identical browser automation tasks through both MCP and CLI interfaces. ...
-
-23. [Can't get comment from PR "Conversation" tab - Gemini in Cursor ...](https://github.com/github/github-mcp-server/issues/416) - Specifically explain how an LLM using the MCP server should retrieve the list of general "Conversati...
-
-24. [Get pull request comments not fetching comments #1079 - GitHub](https://github.com/github/github-mcp-server/issues/1079) - Describe the bug. It looks like the tool is not working as expected. Is it not including the comment...
-
-
-
-# The gap this eval fills
-The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a downstream content-quality outcome scored by an LLM judge, and (3) a CLI vs. MCP comparison within a single Braintrust experiment is not covered by any existing benchmark. The closest prior work is the Scalekit cost study and Zechner's coding benchmark, but neither measures whether the retrieval strategy affects the quality of an LLM's downstream generation — which is the core question your snippet_grounding and deescalation_quality scorers are designed to answer.
-
-# How this eval could be extended | other similar use cases/implementations 
-
-PR review quality triage
-
-Instead of toxicity, the agent identifies low-effort or unconstructive PR reviews ("LGTM" with no substance, drive-by rejection without explanation) and drafts a request for the reviewer to be more specific. The scorer swaps deescalation_quality for review_specificity. The same CLI vs. MCP retrieval tradeoff applies since PR review retrieval is a distinct surface from PR conversation comments in both workflows.
-
-Stale issue hygiene agent
-
-The agent reads open issues older than 90 days, classifies them (abandoned, blocked-on-author, needs-triage, already-fixed-upstream), and drafts a closing comment or a request for status update. This is purely a classification + generation task with no toxicity judgment, making the LLM-judge scorer simpler and the snippet_grounding hallucination check more important since issues may reference stale context.
-
-First-time contributor welcome auditor
-
-Flip the direction: instead of finding discouraging content, the agent identifies first-time contributors whose PRs or issues received no response within 72 hours and drafts a welcoming acknowledgment from the maintainer. This is a proactive community health intervention rather than a reactive one, and it tests a different retrieval pattern — filtering by author_association: FIRST_TIME_CONTRIBUTOR using gh api or list_pull_requests with filters.
-
-Changelog / release note generator
-
-Same CLI vs. MCP retrieval architecture applied to a generation task with a deterministic ground truth: given a set of merged PRs between two tags, generate a structured changelog. Ground truth is the actual release notes already published. snippet_grounding becomes exact-match verifiable (did the agent cite real PR titles?), which removes LLM-judge variability entirely.
-
-Slack/Discord community health (non-GitHub)
-
-The same eval design ports to Slack MCP or Discord CLI tools for communities that operate outside GitHub. The toxicity schema carries over directly, but the retrieval layer changes: thread structure in Slack is nested differently than GitHub issue comments, which tests whether MCP's structured returns (vs. raw API JSON) produce better context windows for the LLM.
+[^24]: ["Get pull request comments not fetching comments"](https://github.com/github/github-mcp-server/issues/1079) — GitHub MCP Server issue #1079. Documents a bug where the MCP tool does not include all PR comments, directly contributing to `retrieval_failure` in the MCP workflow.
