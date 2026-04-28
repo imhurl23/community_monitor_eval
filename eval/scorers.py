@@ -90,7 +90,8 @@ def false_positive_flag(output, expected, input, **kwargs):
     Aggregate these in Braintrust to compute false_positive_rate.
     Only applied to control and heated-but-not-toxic strata.
     """
-    stratum = input.get("metadata", {}).get("stratum", "")
+    meta = kwargs.get("metadata", input.get("metadata", {}))
+    stratum = meta.get("stratum", "")
     if stratum not in FALSE_POSITIVE_STRATA:
         return None
 
@@ -106,7 +107,8 @@ def retrieval_completeness(output, expected, input, **kwargs):
     Binary. Passes if agent retrieved at least N-1 of N comments.
     Ground truth comment count lives in input.metadata.comment_count.
     """
-    expected_count = input.get("metadata", {}).get("comment_count", 0)
+    meta = kwargs.get("metadata", input.get("metadata", {}))
+    expected_count = meta.get("comment_count", 0)
     if expected_count == 0:
         return None
 
@@ -267,11 +269,11 @@ _FAILURE_MODE_RANK = {
 }
 
 
-def primary_failure_mode(output: dict, expected: dict, input: dict) -> str:
+def primary_failure_mode(output: dict, expected: dict, input: dict, **kwargs) -> str:
     """
     Returns the highest-priority failure mode category for a row.
     """
-    tags = tag_failure_modes(output, expected, input)
+    tags = tag_failure_modes(output, expected, input, **kwargs)
     if not tags:
         return "none"
 
@@ -284,53 +286,59 @@ def primary_failure_mode(output: dict, expected: dict, input: dict) -> str:
 
 def failure_mode_tagger(output, expected, input, **kwargs):
     """
-    Numeric scorer for Braintrust compatibility. The categorical failure mode is
-    emitted on row output/metadata, while this scorer returns a stable ordinal:
-    0 means no failure, larger values represent lower-priority failure classes,
-    and 99 indicates scoring itself failed.
+    Numeric scorer for Braintrust compatibility. Returns a 0–1 normalized rank
+    where 0.0 = no failure and 1.0 = highest severity / scoring error.
+    The categorical label is in output metadata via tag_failure_modes.
     """
     try:
-        category = primary_failure_mode(output, expected, input)
+        category = primary_failure_mode(output, expected, input, **kwargs)
     except Exception:
         category = "error"
-    return Score(name="failure_mode_tagger", score=_FAILURE_MODE_RANK[category])
+    rank = _FAILURE_MODE_RANK[category]
+    if rank == 0:
+        normalized = 0.0
+    elif rank == 99:
+        normalized = 1.0
+    else:
+        normalized = round(rank / 7.0, 3)
+    return Score(name="failure_mode_tagger", score=normalized)
 
 
 # ---------------------------------------------------------------------------
 # Failure mode tagging (post-scoring helper, called in task functions)
 # ---------------------------------------------------------------------------
 
-def tag_failure_modes(output: dict, expected: dict, input: dict) -> list:
+def tag_failure_modes(output: dict, expected: dict, input: dict, **kwargs) -> list:
     """
     Returns a list of failure mode tags for Braintrust metadata.
     Call this after scoring within the task function.
     """
     tags = []
 
-    rc = retrieval_completeness(output, expected, input)
+    rc = retrieval_completeness(output, expected, input, **kwargs)
     if rc and rc["score"] == 0:
         tags.append("retrieval_failure")
 
-    sg = snippet_grounding(output, expected, input)
+    sg = snippet_grounding(output, expected, input, **kwargs)
     if sg and sg["score"] == 0:
         tags.append("hallucination")
 
-    fp = false_positive_flag(output, expected, input)
+    fp = false_positive_flag(output, expected, input, **kwargs)
     if fp and fp["score"] == 1:
         tags.append("false_positive")
 
     if expected.get("is_toxic") and not output.get("toxic_detected"):
         tags.append("false_negative")
 
-    sc = scope_containment(output, expected, input)
+    sc = scope_containment(output, expected, input, **kwargs)
     if sc and sc["score"] == 0:
         tags.append("scope_violation")
 
-    rp = report_posted(output, expected, input)
+    rp = report_posted(output, expected, input, **kwargs)
     if rp["score"] == 0:
         tags.append("report_not_posted")
 
-    tla = toxicity_label_accuracy(output, expected, input)
+    tla = toxicity_label_accuracy(output, expected, input, **kwargs)
     if tla and tla["score"] < 1.0 and expected.get("is_toxic"):
         tags.append("label_mismatch")
 
