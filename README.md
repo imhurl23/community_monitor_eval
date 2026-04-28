@@ -3,10 +3,7 @@
 ## TLDR: Which workflow (CLI/MCP) best helps to monitor and keep the conversation happening in our open source communities safe and effective for dev? 
 - Dataset curation builds a shared Braintrust dataset, `community_monitor_pandas`, from GitHub issues and PRs
 
-- The task is a Community Health First Responder workflow: retrieve the full discussion thread, decide whether toxic or discouraging content is present, return a structured analysis with snippet, single toxicity label, severity, and draft response, then post a sandbox report
-
-- Results: experiments now default to `cli-improved-run-N` and `mcp-improved-run-N`, with CLI and MCP sharing the same dataset and scorer suite
-
+- The task is a Community Health First Responder workflow: retrieve the full discussion thread, decide whether toxic or discouraging content is present, return a structured analysis with snippet, single toxicity label, severity, and draft response, then post a report to a sandbox repo. 
 
 
 
@@ -20,11 +17,12 @@ Tool-Using AI Agents`]: any task where tool selection and retrieval completeness
 
 In the current implementation, both workflows keep the model in a read-only retrieval and analysis loop. The sandbox report is posted in code after the final JSON is produced, which preserves the delivery check while avoiding repeated write-tool failures inside the agent loop.
 
-Hypothesis 1 (Effectiveness): The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by human labels and LLM‑judge scores for (a) correct detection of harmful threads, (b) correct toxicity labeling, and (c) quality of de‑escalation drafts, because MCP exposes more structured, semantically rich GitHub tools that support more complete and targeted retrieval.
+Hypothesis 1 (Effectiveness): The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by: (a) correct detection of harmful threads — false‑positive rate via `false_positive_flag` (direct scorer, control/heated strata only) and false‑negative rate derived post‑hoc by filtering rows tagged `false_negative` in `tag_failure_modes`; (b) correct toxicity labeling via `toxicity_label_accuracy`; and (c) quality of de‑escalation drafts via the `deescalation_quality` LLM judge. Note: there is no standalone per‑row FN scorer; FN rate is a post‑hoc aggregate over the `false_negative` tag and should be reported alongside FP rate rather than as a symmetric scorer pair.
 
 Hypothesis 2 (Efficiency / Cost): The CLI‑based workflow will achieve comparable task quality at lower operational cost than the MCP‑based workflow, as measured by total tokens, wall‑clock latency, and number of tool calls per evaluation example, because driving gh through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
 
-Hypothesis 3 (Retrieval interface ↔ failure modes): The distribution of failure modes will differ systematically between workflows: MCP runs will exhibit fewer retrieval incompleteness and irrelevant‑context failures but more tool‑selection / protocol misuse failures, while CLI runs will show the inverse pattern, with more partial retrieval and parsing / heuristic limits but fewer MCP‑specific tool‑use failures.
+Hypothesis 3 (Retrieval interface ↔ failure modes):
+The distribution of failure modes will differ between CLI and MCP workflows. CLI runs will show higher rates of retrieval_failure (retrieval_completeness) and hallucination (snippet_grounding), reflecting pagination limits and looser context grounding. MCP runs will show lower tool_call_efficiency scores — more tool calls for the same task — reflecting the overhead of navigating a richer tool surface, along with higher rates of scope_violation and report_not_posted failures from incorrect tool routing.
 
 
 
