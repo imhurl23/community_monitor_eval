@@ -22,7 +22,7 @@ The broader pattern this eval instantiates is retrieval interface comparison plu
 
 ## Background and Motivation
 
-Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely.[^1] Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums — it skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.[^2][^3]
+Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely.[^1] Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums. The toxicity on these forums skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.[^2][^3]
 
 An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP — also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
 
@@ -70,9 +70,9 @@ Two design choices in this stratification matter for downstream metrics. First, 
 - A `problematic_snippet` quote
 - A gold-standard maintainer response (written by a human with OSS maintainer experience)
 
-To speed annotation, every row ships with a `_review.suspect_comments` payload — the top 3 highest-probability comments in the thread, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The `_review.*` namespace is for the human only; it is stripped before the row is shown to the agent under test.
+To speed annotation, every row ships with a `_review.suspect_comments` payload — the top 3 highest-probability comments in the thread as idnetified by ToxicShield classifier, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The `_review.*` namespace is for the human only; it is stripped before the row is shown to the agent under test.
 
-The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison. This aligns with how Braintrust's `LLMClassifierFromTemplate` pattern works.
+The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison.
 
 ### Dataset Schema (per row)
 
@@ -118,8 +118,6 @@ The gold response is used as a soft reference for LLM-judge scoring, not for exa
 
 When `stratum` and `classifier_stratum` differ, the row was promoted into `clearly_toxic_candidate` by the lock signal — which is exactly the data needed to study where the classifier and the maintainer's own moderation action disagreed.
 
-All rows are committed to a Braintrust Dataset named `community_monitor_pandas` so both workflow variants draw from the same immutable input. The Braintrust insert uses the row `id` as the primary key, so re-running the curation script updates rows in place rather than producing duplicates.
-
 ### Browser Labeler
 
 The repo includes a browser-based annotation tool at `dataset_curation/braintrust-toxicity-labeler.html` for reviewing sampled rows locally before re-importing them into Braintrust. It is designed around the same row shape produced by the curation pipeline: each row carries the discussion metadata, the current `ground_truth` / `expected` label object, and the `_review.suspect_comments` helper payload.
@@ -133,6 +131,10 @@ This tool is used instead of Braintrust's built-in review flow because it surfac
 
 It is especially useful for the toxic and borderline strata because the UI surfaces the top-ranked suspect comments, lets the annotator paste a problematic snippet directly from those comments, and keeps the gold response alongside the labeling controls.
 
+
+<img width="1418" height="913" alt="labeler" src="https://github.com/user-attachments/assets/8c5553d1-ad86-4ccb-a68e-1bbdab078e44" />
+
+
 ### Source Repositories
 
 The eval uses active, mid-size OSS repositories with a documented history of heated discussions. Candidate properties:
@@ -142,7 +144,7 @@ The eval uses active, mid-size OSS repositories with a documented history of hea
 - No existing bot-moderation that would pre-filter toxic content
 - Public repository (read access to source repos; write access required for the eval output board only)
 
-The eval is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial set of: `pandas-dev/pandas`, `home-assistant/core`, `nodejs/node`, `rust-lang/rust`, `kubernetes/kubernetes`.
+The eval is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial pull of just `pandas-dev/pandas`. 
 
 ---
 
@@ -210,7 +212,7 @@ bt eval community_health_cli.py --project "community-health-eval"
 
 ### MCP Workflow
 
-The MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. The code normalizes generic MCP tools into a canonical read surface:[^13]
+For this experiment, MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. The code normalizes generic MCP tools into a canonical read surface:[^13]
 
 ```
 issue_read(method=get, ...)                        → canonical get_issue
@@ -236,63 +238,6 @@ Eval(
 ```
 
 The current MCP task does not pass `mcp_servers=` into Anthropic calls. Instead it uses the Python MCP SDK (`sse_client` + `ClientSession`) to talk to the local `mcp-proxy`, caches the tool list once per process, executes tool calls via `session.call_tool(...)`, and sends those tool results back into Anthropic as normal tool-use messages.
-
----
-
-## Cost Control
-
-All cost controls (`ANALYSIS_MODEL`, `RETRIEVAL_MODEL`, `MAX_TOTAL_TOKENS`, `MAX_TOOL_CALLS`, `MAX_TOOL_ERRORS`, `MAX_TOOL_RESULT_CHARS`, `CLI_TOOL_EXEC_SECONDS`, `MCP_TOOL_EXEC_SECONDS`, etc.) are configurable via environment variables so they can be individually disabled for ablation experiments.
-
-### Control 1 — Haiku by default, with optional retrieval/analysis split
-
-The agent loop uses two models selected per turn:
-
-| Turn | Model | Rationale |
-|---|---|---|
-| Turn 1 (retrieval decision) | `claude-haiku-4-5-20251001` (`RETRIEVAL_MODEL`, default) | The model is only deciding which tools to call — it does not yet reason about toxicity. Haiku is the low-cost default. |
-| Turn 2+ (analysis, write, final JSON) | `claude-haiku-4-5-20251001` (`MODEL`, default) or `claude-sonnet-4-20250514` (override) | The current default keeps analysis on Haiku for cost control; Sonnet remains available as an override when generation quality is the priority. |
-
-Cost is tracked separately via `retrieval_tokens` / `analysis_tokens` output fields. Override `ANALYSIS_MODEL=claude-sonnet-4-20250514` to restore the higher-quality, higher-cost split.
-
-**Estimated savings:** ~60% of retrieval-turn input tokens billed at Haiku rates → ~$12–15 off a ×5 run.
-
-### Control 2 — Reduce `MAX_TOOL_RESULT_CHARS` from 20K to 8K
-
-Raw paginated responses from `gh api --paginate` or the GitHub MCP server can exceed 100K characters. Because tool results are included in the message history on every subsequent LLM turn, an uncapped result inflates context size multiplicatively. 8K chars ≈ 2K tokens, which is sufficient to represent any real discussion thread after metadata compression (see Control 3).
-
-Override with the `MAX_TOOL_RESULT_CHARS` env var. Raise it (e.g. to 15,000) if `retrieval_completeness` scores drop on threads with unusually long bodies.
-
-### Control 3 — Strip GitHub metadata from read-tool results
-
-A `_compress_tool_result()` helper is applied to all read-tool responses (`get_issue`, `get_issue_comments`, `get_pull_request`, `get_pull_request_comments`) before they are added to the message history. It retains only the fields needed for toxicity analysis — `title`, `body`, and per-comment `author`/`body` — discarding timestamps, labels, milestones, assignees, reactions, and other metadata.
-
-This compression happens before `MAX_TOOL_RESULT_CHARS` truncation, so the character budget is spent entirely on content. For a typical issue with 15 comments, this reduces a raw `get_issue` response from ~12K chars to ~3K chars (~75% reduction). Because tool results are re-sent on every subsequent turn in the message history, this is a compounding saving: a 3-turn loop saves 2× the per-result reduction.
-
-### Control 4 — Cap `max_tokens` per turn to match actual output
-
-| Turn | New `max_tokens` | Typical actual output |
-|---|---|---|
-| Retrieval turn (Haiku) | 500 | 50–150 tokens (tool_use JSON only) |
-| Analysis + write + final JSON (Sonnet) | 1,200 | 600–900 tokens (report body + JSON) |
-
-If the agent produces truncated output (signalled by `stop_reason == "max_tokens"`), raise `MAX_AGENT_TURNS` or the relevant per-turn cap via env var.
-
-### Combined impact on ×5 run estimate
-
-| Metric | Before | After (Controls 1–4) |
-|---|---|---|
-| Estimated cost | ~$40 | ~$17–20 |
-| Token count | ~9.9M tokens | ~4–5M tokens |
-
-### Planning estimate: 40-row dataset, 8 toxic rows
-
-A single `run_evals.py --runs 1` invocation over a 40-row dataset executes 80 row-runs total (40 rows × 2 workflows). Under current code defaults, both retrieval and analysis use Haiku. The hard per-row agent budget is bounded by `MAX_TOTAL_TOKENS=80000`, per-turn output caps of 500 retrieval tokens and 1,200 analysis tokens, and Haiku pricing of `$0.80 / MTok` input and `$4.00 / MTok` output.
-
-Scorer cost is much smaller. Toxic rows can trigger up to two Haiku judge calls per toxic row-run (`deescalation_quality` and `snippet_grounding`). With 16 toxic row-runs total, scorer spend remains on the order of a few cents — the total worst-case budget for a single 40-row `--runs 1` execution is roughly **$6.30**.
-
-Wall-clock time is dominated by MCP. Braintrust typically runs about 10 examples concurrently per eval process, while the MCP workflow additionally gates concurrent SSE sessions with `MCP_MAX_CONCURRENT=3`. With `MAX_LATENCY_MS=120000`, the upper-bound planning estimates are approximately 8 minutes for CLI and 27–28 minutes for MCP. In practice, when rows stay closer to the target latency region than the timeout ceiling, a 40-row run is more likely to complete in roughly 4–6 minutes.
-
-Note: the default `run_evals.py` setting is `--runs 5`, not `--runs 1`. Leaving that default unchanged multiplies the total work roughly 5×, pushing the worst-case agent-cost ceiling for the same 40-row dataset to approximately **$31.36** before scorer overhead.
 
 ---
 
@@ -466,18 +411,6 @@ contribute a fix, we would be glad to review a PR.
 ```
 
 The current hard requirement in code is: the model must return JSON containing the toxicity finding, snippet, single `toxicity_label`, severity, and draft response. The workflow code then normalizes missing fields into a stable schema, attaches scorer-facing retrieval fields, and posts the sandbox issue. If retrieval or tool execution aborts, the row is still returned with `analysis_status="incomplete"` plus `task_error` / timeout metadata so the failure is analyzable inside Braintrust rather than crashing the whole eval.
-
----
-
-## Conclusions and Recommendations
-
-**On workflow design:** The CLI and MCP approaches have structurally different failure modes rather than one being strictly superior. CLI is more reliable for retrieval completeness on simple issues but brittle on PR review comments and requires more tool calls. MCP is cleaner for structured access but has a higher risk of agent tool-routing errors on edge cases — particularly the PR conversation vs. review comment distinction.[^12][^22][^23][^24]
-
-**On eval design:** The most valuable scorers for this task are `snippet_grounding` (hallucination guard) and `scope_containment` (safety guard). Quality scorers like `deescalation_quality` are important but inherently variable; repeated-run averaging remains necessary to distinguish signal from noise, with the current default orchestration running five repetitions unless overridden.
-
-**On dataset design:** The borderline and control strata are as important as the clearly-toxic examples. An agent optimized only on clear toxicity will over-flag subtle disagreement, which is harmful to community health in a different direction than under-flagging.
-
-**On the toxicity schema:** The OSS-specific categories — `entitlement`, `passive_aggression`, and `object_directed` — are the most diagnostically useful because general-purpose toxicity detectors systematically miss them. LLM judges should be explicitly primed with examples of these categories in their system prompts to reduce false negatives.[^2][^7]
 
 ---
 
