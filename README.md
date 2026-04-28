@@ -22,15 +22,15 @@ The broader pattern this eval instantiates is retrieval interface comparison plu
 
 ## Background and Motivation
 
-Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely.[^1] Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums. The toxicity on these forums skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.[^2][^3]
+Toxicity in open source is not rare. A 2024 GitHub-wide survey of 8,452 contributors found a statistically significant increase in reported interpersonal challenges compared to 2017, with rudeness, name-calling, and harassment now strongly predictive of contributors stopping their work entirely.[^1] Research from Carnegie Mellon's ISR established that OSS toxicity is qualitatively different from other internet forums. The toxicity on these forums skews toward entitlement, passive aggression, and contextual insults rather than explicit obscenities.[^2]
 
-An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP — also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
+An automated "first responder" agent addresses this problem by reducing the burden on burned-out maintainers. Evaluating such an agent through two interface modalities — CLI and MCP  also surfaces a practically important question about tooling tradeoffs that affects any GitHub-integrated AI workflow.
 
 ---
 
 ## Toxicity Schema
 
-The following eight categories are drawn from the OSS-specific research literature, with OSS-specific nuance noted.[^4][^6][^7]
+The following eight categories are drawn from the OSS-specific research literature, with OSS-specific nuance noted.[^3][^4][^5]
 
 | Label | Short description | OSS-specific signal |
 |---|---|---|
@@ -38,10 +38,10 @@ The following eight categories are drawn from the OSS-specific research literatu
 | `entitlement` | Demanding tone, "fix this NOW", "why hasn't this been done" | Most distinctive OSS category; often missed by general detectors[^2] |
 | `dismissive_tone` | Closing without engagement, "not my problem", curt rejection | Discourages newcomers even when technically polite |
 | `sarcasm_belittling` | Ironic minimization, mocking effort or skill | Hard to auto-detect; high false-negative rate in LSTM models[^8] |
-| `passive_aggression` | Technically civil but subtly hostile framing | Contextually rich; CMU study flags as most "OSS-specific" pattern[^3] |
+| `passive_aggression` | Technically civil but subtly hostile framing | Contextually rich; CMU study flags as most "OSS-specific" pattern[^2] |
 | `gatekeeping` | Condescension toward perceived skill level, "have you even read the docs?" | Particularly discouraging for first-time contributors |
 | `thread_derailment` | Off-topic escalation, personal attacks displacing technical discussion | Often involves prior relationship context |
-| `object_directed` | Hostility directed at code/project artifacts ("this codebase is trash") | Distinct from person-directed; coined by Sarker et al.[^6] |
+| `object_directed` | Hostility directed at code/project artifacts ("this codebase is trash") | Distinct from person-directed; coined by Sarker et al.[^4] |
 
 ---
 
@@ -60,7 +60,7 @@ The dataset consists of N discussion items (a mix of issues and PRs from the sou
 | `heated_not_toxic_candidate` | 20 | ≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language |
 | `control_candidate` | 20 | ≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads |
 
-Two design choices in this stratification matter for downstream metrics. First, the `borderline` and `control` strata are essential for measuring false-positive rates and `scope_containment` integrity — an agent that flags every heated thread fails just as surely as one that misses genuine toxicity. Second, `clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
+Two design choices in this stratification matter for downstream metrics. First, the `borderline` and `control` strata are essential for measuring false-positive rates and `scope_containment` integrity, an agent that flags every heated thread fails just as surely as one that misses genuine toxicity. Second, `clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
 
 **Phase 2 — Ground truth annotation.** For each sampled item, an annotator produces:
 
@@ -202,7 +202,7 @@ gh pr view 42 --repo eslint/eslint --json title,body,comments,reviews
 gh api /repos/eslint/eslint/issues/17823/comments --paginate
 ```
 
-A known limitation is that `gh pr view --json comments` does not include inline review comments as of 2025. The CLI agent must use `gh api` as a fallback to retrieve those, which adds a tool call and increases latency. This is a documented edge case in the eval.[^11][^12]
+A known limitation is that `gh pr view --json comments` does not include inline review comments as of 2025. The CLI agent must use `gh api` as a fallback to retrieve those, which adds a tool call and increases latency. This is a documented edge case in the eval.[^6][^7]
 
 **Eval runner:**
 
@@ -212,7 +212,7 @@ bt eval community_health_cli.py --project "community-health-eval"
 
 ### MCP Workflow
 
-For this experiment, MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. The code normalizes generic MCP tools into a canonical read surface:[^13]
+For this experiment, MCP agent uses the GitHub MCP Server through a local `mcp-proxy` SSE bridge. The eval task opens a `ClientSession`, caches the discovered tool list once per process, and gates concurrent SSE sessions with `MCP_MAX_CONCURRENT` so Braintrust row-level parallelism does not overwhelm the single proxied server process. The code normalizes generic MCP tools into a canonical read surface:[^8]
 
 ```
 issue_read(method=get, ...)                        → canonical get_issue
@@ -302,7 +302,7 @@ Does the draft response:
 
 **`snippet_grounding`** (binary: 0 or 1)
 
-Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard — an agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.[^16]
+Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard — an agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.
 
 ### Efficiency / Telemetry Scorers
 
@@ -438,30 +438,19 @@ The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a dow
 
 [^1]: ["The Shifting Sands of Toxicity: The Evolving Nature of Interpersonal Challenges in Open Source"](https://conf.researchr.org/details/esem-2025/esem-2025-technical-track/24/The-Shifting-Sands-of-Toxicity-The-Evolving-Nature-of-Interpersonal-Challenges-in-Op) — ESEM 2025. 2024 GitHub-wide survey of 8,452 contributors on interpersonal challenges and contributor attrition.
 
-[^2]: ["Study Finds Toxicity in the Open-Source Community Varies From Other Online Forums"](https://techxplore.com/news/2022-06-toxicity-open-source-varies-internet-forums.html) — TechXplore, June 2022. Coverage of CMU ISR research on OSS-specific toxicity patterns; notes that entitlement and passive aggression are often missed by general detectors.
+[^2]: ["Study Finds Toxicity in the Open-Source Community Varies From Other Online Forums"](https://www.cmu.edu/news/stories/archives/2022/july/study-finds-toxicity-in-the-open-source-community-varies-from-other-online-forums) — Carnegie Mellon University News, July 2022. Primary source for CMU ISR findings on passive aggression as the most OSS-specific toxicity pattern.
 
-[^3]: ["Study Finds Toxicity in the Open-Source Community Varies From Other Online Forums"](https://www.cmu.edu/news/stories/archives/2022/july/study-finds-toxicity-in-the-open-source-community-varies-from-other-online-forums) — Carnegie Mellon University News, July 2022. Primary source for CMU ISR findings on passive aggression as the most OSS-specific toxicity pattern.
+[^3]: ["Real-Time Toxicity Filtering for Open-Source Code Reviews"](https://arxiv.org/html/2604.08886v1) — arXiv:2604.08886. Framework comprising toxicity identification, reasoned multiclass classification, and mitigation modules relevant to the 8-label schema.
 
-[^4]: ["Real-Time Toxicity Filtering for Open-Source Code Reviews"](https://arxiv.org/html/2604.08886v1) — arXiv:2604.08886. Framework comprising toxicity identification, reasoned multiclass classification, and mitigation modules relevant to the 8-label schema.
+[^4]: ["The Landscape of Toxicity: An Empirical Investigation of Toxicity on GitHub"](https://www.themoonlight.io/de/review/the-landscape-of-toxicity-an-empirical-investigation-of-toxicity-on-github) — Sarker et al. Source for the `object_directed` label category (hostility directed at artifacts rather than persons).
 
-[^6]: ["The Landscape of Toxicity: An Empirical Investigation of Toxicity on GitHub"](https://www.themoonlight.io/de/review/the-landscape-of-toxicity-an-empirical-investigation-of-toxicity-on-github) — Sarker et al. Source for the `object_directed` label category (hostility directed at artifacts rather than persons).
+[^5]: ["Analyzing Toxicity in Open Source Software Communications"](https://arxiv.org/html/2412.13133v2) — arXiv:2412.13133. OSS-specific toxicity communication analysis; informs label schema design.
 
-[^7]: ["Analyzing Toxicity in Open Source Software Communications"](https://arxiv.org/html/2412.13133v2) — arXiv:2412.13133. OSS-specific toxicity communication analysis; informs label schema design.
+[^6]: ["Add PR review helper commands under `gh pr` for inline comments"](https://github.com/cli/cli/issues/12232) — GitHub CLI issue #12232. Documents the absence of inline review comment support in `gh pr` and the AI agent use case implications.
 
-[^8]: ["Toxic Comment Classification and Mitigation in Social Media Platforms"](https://www.scitepress.org/Papers/2025/139031/139031.pdf) — SCITEPRESS 2025. Documents high false-negative rates for sarcasm and belittling in LSTM-based classifiers.
+[^7]: ["`gh pr view --comments` should show all comments"](https://github.com/cli/cli/issues/5788) — GitHub CLI issue #5788. Documents that `gh pr view <branch-id> --comments` does not include inline review comments, requiring `gh api` as a fallback.
 
-[^11]: ["Add PR review helper commands under `gh pr` for inline comments"](https://github.com/cli/cli/issues/12232) — GitHub CLI issue #12232. Documents the absence of inline review comment support in `gh pr` and the AI agent use case implications.
+[^8]: ["Add support for reading issue comments in GitHub MCP server"](https://github.com/modelcontextprotocol/servers/issues/3006) — MCP Servers issue #3006. Documents that the GitHub MCP server's tool naming for issue vs. PR comments differs from stable top-level names; basis for the normalization layer.
 
-[^12]: ["`gh pr view --comments` should show all comments"](https://github.com/cli/cli/issues/5788) — GitHub CLI issue #5788. Documents that `gh pr view <branch-id> --comments` does not include inline review comments, requiring `gh api` as a fallback.
+[^9]: ["A Comprehensive Taxonomy of Hallucinations in Large Language Models"](https://arxiv.org/abs/2508.01781) — arXiv:2508.01781. Taxonomy of hallucination types and underlying causes; basis for treating fabricated snippets as a distinct, high-priority failure mode.
 
-[^13]: ["Add support for reading issue comments in GitHub MCP server"](https://github.com/modelcontextprotocol/servers/issues/3006) — MCP Servers issue #3006. Documents that the GitHub MCP server's tool naming for issue vs. PR comments differs from stable top-level names; basis for the normalization layer.
-
-[^16]: ["A Comprehensive Taxonomy of Hallucinations in Large Language Models"](https://arxiv.org/abs/2508.01781) — arXiv:2508.01781. Taxonomy of hallucination types and underlying causes; basis for treating fabricated snippets as a distinct, high-priority failure mode.
-
-[^21]: ["GitHub MCP Server"](https://mcpservers.org/servers/asifdotpy/github-mcp-server-asifdotpy) — MCP Servers directory. Reference entry for the GitHub MCP Server and its tool surface.
-
-[^22]: ["Why CLI Tools Are Beating MCP for AI Agents"](https://jannikreinhard.com/2026/02/22/why-cli-tools-are-beating-mcp-for-ai-agents/) — Jannik Reinhard, February 2026. Comparison of browser automation tasks run through MCP vs. CLI interfaces; supports Hypothesis 2 on CLI efficiency and Hypothesis 3 on failure mode distribution.
-
-[^23]: ["Can't get comment from PR 'Conversation' tab"](https://github.com/github/github-mcp-server/issues/416) — GitHub MCP Server issue #416. Documents the PR conversation vs. review comment retrieval ambiguity that produces tool-routing failures in MCP workflows.
-
-[^24]: ["Get pull request comments not fetching comments"](https://github.com/github/github-mcp-server/issues/1079) — GitHub MCP Server issue #1079. Documents a bug where the MCP tool does not include all PR comments, directly contributing to `retrieval_failure` in the MCP workflow.
