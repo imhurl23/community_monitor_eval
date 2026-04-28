@@ -1,7 +1,5 @@
 # OSS Community Health First Responder: CLI vs. MCP Eval Design
 
-## TLDR: Which workflow (CLI/MCP) best helps to monitor and keep the conversation happening in our open source communities safe and effective for dev? 
-
 ## Overview
 
 This document covers the design and execution of an evaluation comparing different architectural approaches for the **Community Health First Responder** task: an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses.
