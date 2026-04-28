@@ -5,8 +5,7 @@
 
 - The task is a Community Health First Responder workflow: retrieve the full discussion thread, decide whether toxic or discouraging content is present, return a structured analysis with snippet, single toxicity label, severity, and draft response, then post a sandbox report
 
-- Results: 
-- Results: 
+- Results: experiments now default to `cli-improved-run-N` and `mcp-improved-run-N`, with CLI and MCP sharing the same dataset and scorer suite
 
 
 
@@ -472,9 +471,9 @@ span.log(metadata={
     "repo": "eslint/eslint",
     "discussion_type": "issue",
     "stratum": "borderline",    # clearly_toxic | borderline | heated | control
-  "discussion_id": "eslint-issue-17823",
-  "retrieval_model": "claude-haiku-4-5-20251001",
-  "analysis_model": "claude-haiku-4-5-20251001",
+    "discussion_id": "eslint-issue-17823",
+    "retrieval_model": "claude-haiku-4-5-20251001",
+    "analysis_model": "claude-haiku-4-5-20251001",
 })
 ```
 
@@ -491,7 +490,7 @@ The task functions emit explicit output fields for `latency_ms`, `retrieval_late
 | Metric | Expected CLI Pattern | Expected MCP Pattern |
 |---|---|---|
 | `scope_containment` | High (deterministic shell; clear boundaries) | Slightly lower (tool ambiguity; write tools adjacent to read tools) |
-| `retrieval_completeness` | Lower on PR inline comments[^12] | Higher when `get_issue_comments` is available[^21]; lower when it isn't[^13] |
+| `retrieval_completeness` | Lower on PR inline comments[^12] | Higher when the MCP server returns both issue/PR body and comment methods cleanly; lower when generic tool routing or server support is incomplete[^13][^21] |
 | `tool_call_count` | Higher (must `gh api` paginate; multiple subprocess invocations) | Lower (structured, paginated tool returns in fewer calls) |
 | `latency_ms` (retrieval only) | Lower for simple threads; higher for pagination | More consistent; single structured call per entity |
 | `deescalation_quality` | Equivalent (same LLM; only retrieval differs) | Equivalent |
@@ -511,13 +510,13 @@ Run the scorer suite separately for each stratum:
 
 1. **Paginated threads (>30 comments):** CLI requires `--paginate` flag or explicit loop; MCP returns paginated results but some implementations have a `per_page` cap. Both may silently truncate.[^21]
 
-2. **PR with both issue comments and review comments:** CLI: `gh pr view --json comments` omits inline review comments; MCP: `get_pull_request_comments` vs. `get_issue` distinction is confusing and has caused tool-routing failures in the wild. Agents using MCP have returned empty responses for PR conversation-tab comments because the LLM chose the wrong tool.[^12][^23][^24][^11]
+2. **PR with both issue comments and review comments:** CLI: `gh pr view --json comments` omits inline review comments; MCP: the generic `pull_request_read(method=...)` vs. `issue_read(method=...)` distinction is confusing and has caused tool-routing failures in the wild. Agents using MCP have returned empty responses for PR conversation-tab comments because the LLM chose the wrong tool/method combination.[^12][^23][^24][^11]
 
 3. **Deleted or locked threads:** CLI: `gh issue view` returns the issue with a `locked` field but no deleted comments; MCP: same limitation. Both workflows may miss the most severe historical toxicity.
 
 4. **Rate limiting:** GitHub API allows 5,000 requests/hour for authenticated users. A multi-repo run of 20 discussions with pagination could approach this if comment counts are high. The CLI workflow can hit rate limits with fewer retries built in; the MCP server may handle this more gracefully depending on its implementation.
 
-5. **Ambiguous tool selection in MCP:** MCP agents have been observed selecting `get_pull_request_comments` (review comments) when they wanted `get_issue` conversation comments, returning empty results and then proceeding as if the thread had no comments. This is a structurally distinct failure from CLI's pagination gap and should be tracked separately under `retrieval_failure`.[^23][^24]
+5. **Ambiguous tool selection in MCP:** MCP agents have been observed selecting `pull_request_read(method=get_review_comments)` when they wanted issue-style conversation comments, returning empty or partial results and then proceeding as if the thread had no comments. This is a structurally distinct failure from CLI's pagination gap and should be tracked separately under `retrieval_failure`.[^23][^24]
 
 ***
 
@@ -632,7 +631,7 @@ The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a dow
 
 PR review quality triage
 
-Instead of toxicity, the agent identifies low-effort or unconstructive PR reviews ("LGTM" with no substance, drive-by rejection without explanation) and drafts a request for the reviewer to be more specific. The scorer swaps deescalation_quality for review_specificity. The same CLI vs. MCP retrieval tradeoff applies since get_pull_request_reviews is a distinct tool from get_pull_request_comments.
+Instead of toxicity, the agent identifies low-effort or unconstructive PR reviews ("LGTM" with no substance, drive-by rejection without explanation) and drafts a request for the reviewer to be more specific. The scorer swaps deescalation_quality for review_specificity. The same CLI vs. MCP retrieval tradeoff applies since PR review retrieval is a distinct surface from PR conversation comments in both workflows.
 
 Stale issue hygiene agent
 
