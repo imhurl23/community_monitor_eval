@@ -71,7 +71,7 @@ A dataset consists of N discussion items (a mix of issues and PRs from the sourc
 - A severity score: `low` / `medium` / `high`
 - A `problematic_snippet` quote
 - A gold-standard maintainer response 
-To speed annotation, every row ships with a `_review.suspect_comments` payload — the top 3 highest-probability comments in the thread as idnetified by ToxicShield classifier, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The `_review.*` namespace is for the human only; it is stripped before the row is shown to the agent under test.
+To speed annotation, every row ships with a `_review.suspect_comments` payload. The top 3 highest-probability comments in the thread as idnetified by ToxicShield classifier, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The `_review.*` namespace is for the human only; it is stripped before the row is shown to the agent under test.
 
 The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison.
 
@@ -397,22 +397,9 @@ The scorer code defines the following failure taxonomy and collapses each row to
 
 ---
 
-## Braintrust Experiment Structure
+## Experiment Note
+`run_evals.py` defaults to `--runs 5` but the reported results are from an 8 run set. 
 
-### Project Layout
-
-```
-Project: community-health-eval
-├── Dataset: community_monitor_pandas
-├── Experiment: cli-improved-run-1
-├── Experiment: cli-improved-run-2
-├── Experiment: ...
-├── Experiment: mcp-improved-run-1
-├── Experiment: mcp-improved-run-2
-└── Experiment: ...
-```
-
-`run_evals.py` defaults to `--runs 5` and launches workflow/run combinations via a `ThreadPoolExecutor`. `--max-workers` caps the number of concurrent `bt eval` subprocesses. The current default is conservative when MCP is enabled: 2 workers when both workflows are running, 1 worker for MCP-only runs, and full fanout for CLI-only runs. Experiment names are configurable via `--cli-experiment-prefix` / `--mcp-experiment-prefix` (defaulting to `cli-improved` / `mcp-improved`). If a fatal Anthropic billing failure is detected, pending tasks are cleared and the run exits early after in-flight tasks complete.
 
 ### Metadata Tags per Row
 
@@ -472,11 +459,11 @@ These are conditions where the eval produces a passing score but the agent is ac
 
 ### A fabricated snippet can pass `snippet_grounding` if the thread text is long enough
 
-`snippet_grounding` checks whether the quoted snippet appears in `retrieved_thread_text`. That field is the agent's own retrieval output, not the ground truth thread. If the agent retrieves a truncated thread and fabricates a snippet that is plausible but absent from the real thread, it can still pass if the fabricated text happens to match something in what was retrieved. More importantly, `MAX_TOOL_RESULT_CHARS = 8,000` truncates long thread results before they are stored — so for a 40-comment thread, `retrieved_thread_text` may represent only the first half of the actual conversation. A snippet grounded in the stored half passes the check regardless of whether it represents the most toxic content in the full thread. The scorer cannot distinguish "agent found the right thing" from "agent found something that was in the truncated retrieval window."
+`snippet_grounding` checks whether the quoted snippet appears in `retrieved_thread_text`. That field is the agent's own retrieval output, not the ground truth thread. If the agent retrieves a truncated thread and fabricates a snippet that is plausible but absent from the real thread, it can still pass if the fabricated text happens to match something in what was retrieved. More importantly, `MAX_TOOL_RESULT_CHARS = 8,000` truncates long thread results before they are stored, so for a 40-comment thread, `retrieved_thread_text` may represent only the first half of the actual conversation. A snippet grounded in the stored half passes the check regardless of whether it represents the most toxic content in the full thread. The scorer cannot distinguish "agent found the right thing" from "agent found something that was in the truncated retrieval window."
 
 ### Generic de-escalation responses score well on `deescalation_quality`
 
-The LLM-judge prompt asks whether the draft response reduces tension without escalating or assigning blame. A generic, contextually unconnected response — "Thank you for your contribution. Let's keep the discussion constructive and respectful." — will reliably score A (1.0) because it technically satisfies all three criteria. It does not escalate, it does not assign blame, and it nominally addresses tone. The judge is not checking whether the response addresses the *specific* toxic content — only whether the tone is appropriate. An agent could produce boilerplate de-escalation for every flagged thread and score near-perfectly on this dimension while not providing practically helpful de-escalations. 
+The LLM-judge prompt asks whether the draft response reduces tension without escalating or assigning blame. A generic, contextually unconnected response like, "Thank you for your contribution. Let's keep the discussion constructive and respectful." will reliably score A (1.0) because it technically satisfies all three criteria. It does not escalate, it does not assign blame, and it nominally addresses tone. The judge is not checking whether the response addresses the *specific* toxic content only whether the tone is appropriate. An agent could produce boilerplate de-escalation for every flagged thread and score near-perfectly on this dimension while not providing practically helpful de-escalations. 
 
 ### `retrieval_completeness` allows one miss but is anchored to the metadata comment count, not the true comment count
 
@@ -484,7 +471,7 @@ The scorer checks whether the agent retrieved at least N–1 comments, where N i
 
 ### Inline PR review comments are structurally invisible to CLI and partially invisible to MCP
 
-`gh pr view --json comments` does not return inline review comments — only top-level conversation comments. The CLI agent must issue a separate `gh api` call for those, which counts against `MAX_TOOL_CALLS = 6`. If the agent uses its tool budget on other retrieval steps first, it may exhaust the call limit before fetching inline comments. For a PR where the toxic content is an inline review comment (e.g., a condescending remark on a specific code line), the agent can retrieve a complete top-level thread, pass `retrieval_completeness`, and still miss the toxic content entirely — producing a false negative with a passing retrieval score. The MCP normalization layer maps `get_pull_request_review_comments` to the canonical surface. 
+`gh pr view --json comments` does not return inline review comments. The CLI agent must issue a separate `gh api` call for those, which counts against `MAX_TOOL_CALLS = 6`. If the agent uses its tool budget on other retrieval steps first, it may exhaust the call limit before fetching inline comments. For a PR where the toxic content is an inline review comment (e.g., a condescending remark on a specific code line), the agent can retrieve a complete top-level thread, pass `retrieval_completeness`, and still miss the toxic content entirely — producing a false negative with a passing retrieval score. The MCP normalization layer maps `get_pull_request_review_comments` to the canonical surface. 
 
 ### The `clearly_toxic` stratum conflates classifier confidence with ground truth toxicity
 
