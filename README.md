@@ -248,7 +248,7 @@ The current MCP task does not pass `mcp_servers=` into Anthropic calls. Instead 
 
 ## Model Configuration
 
-Both workflow scripts share the same model structure. All values are defaults; any can be overridden via environment variable.
+Both workflow scripts share the same model structure. The values below were used for the reported pandas evalution report; however, any can be overridden via environment variable in the evaluation design. 
 
 ### Models
 
@@ -348,7 +348,7 @@ A → 1.0, B → 0.5, C → 0.0
 
 **`snippet_grounding`** (binary: 0 or 1)
 
-Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard — an agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.
+Verifies that the quoted snippet actually appears in the retrieved comment thread. This is the primary hallucination guard. An agent that fabricates toxic content that wasn't there is tagged with the `hallucination` failure mode.
 
 ### Efficiency / Telemetry Scorers
 
@@ -472,11 +472,9 @@ The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a dow
 
 **Stale issue hygiene agent.** The agent reads open issues older than 90 days, classifies them (`abandoned`, `blocked-on-author`, `needs-triage`, `already-fixed-upstream`), and drafts a closing comment or a request for status update. This is a classification + generation task with no toxicity judgment, making the LLM-judge scorer simpler and `snippet_grounding` more important since issues may reference stale context.
 
-**First-time contributor welcome auditor.** Instead of finding discouraging content, the agent identifies first-time contributors whose PRs or issues received no response within 72 hours and drafts a welcoming acknowledgment. This is a proactive community health intervention rather than a reactive one, and it tests a different retrieval pattern filtering by `author_association: FIRST_TIME_CONTRIBUTOR` using `gh api` or `list_pull_requests` with filters.
+**Changelog / release note generator.** The same CLI vs. MCP retrieval architecture applied to a generation task with a deterministic ground truth: given a set of merged PRs between two tags, generate a structured changelog. Ground truth is the actual release notes already published. `snippet_grounding` becomes exact-match verifiable (did the agent cite real PR titles?), which removes LLM-judge variability.
 
-**Changelog / release note generator.** The same CLI vs. MCP retrieval architecture applied to a generation task with a deterministic ground truth: given a set of merged PRs between two tags, generate a structured changelog. Ground truth is the actual release notes already published. `snippet_grounding` becomes exact-match verifiable (did the agent cite real PR titles?), which removes LLM-judge variability entirely.
-
-**Slack / Discord community health (non-GitHub).** The same eval design ports to Slack MCP or Discord CLI tools for communities that operate outside GitHub. The toxicity schema carries over directly, but the retrieval layer changes: thread structure in Slack is nested differently than GitHub issue comments, which tests whether MCP's structured returns (vs. raw API JSON) produce better context windows for the LLM.
+**Slack / Discord community health (non-GitHub).** The same eval design ports to Slack MCP or Discord CLI tools for developer communities that operate outside GitHub. The toxicity schema carries over directly, but the retrieval layer changes: thread structure in Slack is nested differently than GitHub issue comments, which tests whether MCP's structured returns (vs. raw API JSON) produce better context windows for the LLM.
 
 ---
 
