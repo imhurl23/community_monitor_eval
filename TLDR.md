@@ -1,4 +1,4 @@
-# OSS Community Health First Responder: Summary
+## TLDR: Which workflow (CLI/MCP) best helps to monitor and keep the conversation happening in our open source communities safe and effective for dev? 
 
 This evaluation compares two ways of building a GitHub community-health triage agent: a CLI workflow based on `gh` and an MCP workflow based on the GitHub MCP Server.
 

@@ -1,7 +1,5 @@
 # OSS Community Health First Responder: CLI vs. MCP Eval Design
 
-## TLDR: Which workflow (CLI/MCP) best helps to monitor and keep the conversation happening in our open source communities safe and effective for dev? 
-
 ## Overview
 
 This document covers the design and execution of an evaluation comparing different architectural approaches for the **Community Health First Responder** task: an agent that surfaces potentially toxic or discouraging GitHub discussions and drafts maintainer de-escalation responses.
@@ -14,8 +12,6 @@ The broader pattern this eval instantiates is retrieval interface comparison plu
 
 ## Hypotheses
 **Hypothesis 1 (Effectiveness):** The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by: (a) correct detection of harmful threads: false‑positive rate via `false_positive_flag` (direct scorer, control/heated strata only) and false‑negative rate derived post‑hoc by filtering rows tagged `false_negative` in `tag_failure_modes`; (b) correct toxicity labeling via `toxicity_label_accuracy`; and (c) quality of de‑escalation drafts via the `deescalation_quality` LLM judge.
-
-
 
 **Hypothesis 2 - (Efficiency/Cost) :** The CLI‑based workflow will achieve comparable task quality at lower operational cost than the MCP‑based workflow, as measured by total tokens, wall‑clock latency, and number of tool calls per evaluation example, because driving gh through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
 
@@ -53,18 +49,20 @@ The following eight categories are drawn from the OSS-specific research literatu
 
 ### Construction
 
-The dataset consists of N discussion items (a mix of issues and PRs from the source OSS repos), each forming one eval row. The current `community_monitor_pandas` build has X items sampled from the five-repo set described below; that number scales linearly with the number of repos and the per-stratum cap. Construction proceeds in two phases.
+A dataset consists of N discussion items (a mix of issues and PRs from the source OSS repos), each forming one eval row. The dataset created for this evalution is called `community_monitor_pandas` dataset and has N=39 items sampled from https://github.com/pandas-dev/pandas/. 
 
-**Phase 1 — Two-pass sampling.** The pipeline first runs a cheap metadata sweep, then applies ToxiShield only on threads that could land in a non-control stratum, then stratifies into four buckets and samples per (repo, stratum) cell to prevent any one high-volume repo from dominating.
+**Phase 1 — Two-pass sampling.** The pipeline first runs a cheap metadata sweep, then applies ToxiShield (an OSS specific toxicity classifier) only on threads that could land in a non-control stratum (threads that have sufficient comments do do toxicity classification), then stratifies into four buckets and samples per stratum to ensure variety in the types of discussions included.
+
+**_If multiple repos were included _** the dataset_curation.py samples per (repo, stratum) cell to prevent any one high-volume repo from dominating.
 
 | Stratum | Default cap per repo | Sampling criterion |
 |---|---|---|
-| `clearly_toxic_candidate` | 20 | At least one comment with ToxiShield prob ≥ 0.7, OR GitHub maintainers locked the thread with `active_lock_reason == "too heated"` |
-| `borderline_candidate` | 20 | At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone |
-| `heated_not_toxic_candidate` | 20 | ≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language |
-| `control_candidate` | 20 | ≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads |
+| `clearly_toxic_candidate` | 10 | At least one comment with ToxiShield prob ≥ 0.7, OR GitHub maintainers locked the thread with `active_lock_reason == "too heated"` |
+| `borderline_candidate` | 10 | At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone |
+| `heated_not_toxic_candidate` | 10 | ≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language |
+| `control_candidate` | 10 | ≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads |
 
-Two design choices in this stratification matter for downstream metrics. First, the `borderline` and `control` strata are essential for measuring false-positive rates and `scope_containment` integrity, an agent that flags every heated thread fails just as surely as one that misses genuine toxicity. Second, `clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
+`clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
 
 **Phase 2 — Ground truth annotation.** For each sampled item, an annotator produces:
 
@@ -72,8 +70,7 @@ Two design choices in this stratification matter for downstream metrics. First, 
 - If toxic: one or more labels from the 8-label schema
 - A severity score: `low` / `medium` / `high`
 - A `problematic_snippet` quote
-- A gold-standard maintainer response (written by a human with OSS maintainer experience)
-
+- A gold-standard maintainer response 
 To speed annotation, every row ships with a `_review.suspect_comments` payload — the top 3 highest-probability comments in the thread as idnetified by ToxicShield classifier, with author, association, timestamp, and a 600-char body preview. The annotator can label without reading the entire thread end-to-end. The `_review.*` namespace is for the human only; it is stripped before the row is shown to the agent under test.
 
 The gold response is used as a soft reference for LLM-judge scoring, not for exact-match comparison.
@@ -148,7 +145,11 @@ The eval uses active, mid-size OSS repositories with a documented history of hea
 - No existing bot-moderation that would pre-filter toxic content
 - Public repository (read access to source repos; write access required for the eval output board only)
 
-The eval is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial pull of just `pandas-dev/pandas`. 
+The evaluation structure is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial pull of just `pandas-dev/pandas`.
+
+### Pandas Dataset Overview
+<img width="837" height="497" alt="Screenshot 2026-04-28 at 11 31 11 PM" src="https://github.com/user-attachments/assets/d8985301-622f-436b-81e0-e3aa3077beb4" />
+
 
 ---
 
@@ -206,7 +207,7 @@ gh pr view 42 --repo eslint/eslint --json title,body,comments,reviews
 gh api /repos/eslint/eslint/issues/17823/comments --paginate
 ```
 
-A known limitation is that `gh pr view --json comments` does not include inline review comments as of 2025. The CLI agent must use `gh api` as a fallback to retrieve those, which adds a tool call and increases latency. This is a documented edge case in the eval.[^6][^7]
+A known limitation is that `gh pr view --json comments` does not include inline review comments as of 2025. The CLI agent must use `gh api` as a fallback to retrieve those, which adds a tool call and increases latency. This is a possible edge case in the eval where toxic comments could slip by the cli agent.[^6][^7]
 
 **Eval runner:**
 
@@ -258,7 +259,7 @@ Both workflow scripts share the same model structure. All values are defaults; a
 | Toxicity label classifier | `claude-sonnet-4-20250514` | `LABEL_CLASSIFIER_MODEL` |
 | LLM-judge scorers | `claude-haiku-4-5-20251001` | — (hardcoded in `scorers.py`) |
 
-The retrieval/analysis split is a cost optimization: the first turn only decides which tools to call (Haiku is sufficient), while later turns perform analysis and generate the JSON output.
+**Note on LLM-judge design**: The current setup uses claude-haiku-4-5-20251001 as both the analysis model and the LLM-judge scorer, which definately creates a circularity problem :/  The eval originally ran with Sonnet for generation before switching to Haiku for cost reasons. A different lightweight model (ideally one not used anywhere else in the pipeline) would be better suited as the judge to avoid this bias.
 
 ### Generation parameters
 
@@ -270,7 +271,7 @@ The retrieval/analysis split is a cost optimization: the first turn only decides
 
 ### Agent loop limits
 
-All limits are overridable via environment variable.
+All limits are overridable via environment variable but these were the standards used, 
 
 | Limit | Default | Override env var |
 |---|---|---|
@@ -429,7 +430,7 @@ span.log(metadata={
 
 ### Tracking Latency and Token Cost
 
-The task functions emit explicit output fields for `latency_ms`, `retrieval_latency_ms`, `llm_latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, and `cost_usd`. They also break spend down into `retrieval_tokens` and `analysis_tokens`, plus `retrieval_model` and `analysis_model`, so the Haiku-first optimization can be analyzed directly. Both tasks emit `analysis_status`, `task_error`, `tool_error_messages`, and `tool_timeout_count` so incomplete rows can be analyzed rather than treated as silent failures. The MCP task additionally logs `queue_wait_ms`, which separates semaphore wait time from the row's actual task budget.
+The task functions emit explicit output fields for `latency_ms`, `retrieval_latency_ms`, `llm_latency_ms`, `prompt_tokens`, `completion_tokens`, `total_tokens`, and `cost_usd`. They break spend down into `retrieval_tokens` and `analysis_tokens`, plus `retrieval_model` and `analysis_model`, so the Haiku-first optimization can be analyzed directly if a heavier-weight model is used for downstream task. Both tasks emit `analysis_status`, `task_error`, `tool_error_messages`, and `tool_timeout_count` so incomplete rows can be analyzed rather than treated as silent failures. The MCP task additionally logs `queue_wait_ms`, which separates semaphore wait time from the row's actual task budget.
 
 ---
 
