@@ -13,8 +13,6 @@ The broader pattern this eval instantiates is retrieval interface comparison plu
 ## Hypotheses
 **Hypothesis 1 (Effectiveness):** The MCP‑based workflow will achieve higher end‑to‑end task quality than the CLI‑based workflow on the Community Health First Responder task, as measured by: (a) correct detection of harmful threads: false‑positive rate via `false_positive_flag` (direct scorer, control/heated strata only) and false‑negative rate derived post‑hoc by filtering rows tagged `false_negative` in `tag_failure_modes`; (b) correct toxicity labeling via `toxicity_label_accuracy`; and (c) quality of de‑escalation drafts via the `deescalation_quality` LLM judge.
 
-
-
 **Hypothesis 2 - (Efficiency/Cost) :** The CLI‑based workflow will achieve comparable task quality at lower operational cost than the MCP‑based workflow, as measured by total tokens, wall‑clock latency, and number of tool calls per evaluation example, because driving gh through a shell interface avoids MCP protocol overhead and uses simpler, more predictable command patterns that models already handle efficiently.
 
 **Hypothesis 3 (Retrieval interface ↔ failure modes)**:
@@ -147,7 +145,11 @@ The eval uses active, mid-size OSS repositories with a documented history of hea
 - No existing bot-moderation that would pre-filter toxic content
 - Public repository (read access to source repos; write access required for the eval output board only)
 
-The eval is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial pull of just `pandas-dev/pandas`. 
+The evaluation structure is repo-agnostic by design, but the current `community_monitor_pandas` dataset and results are pooled from an initial pull of just `pandas-dev/pandas`.
+
+### Pandas Dataset Overview
+<img width="837" height="497" alt="Screenshot 2026-04-28 at 11 31 11 PM" src="https://github.com/user-attachments/assets/d8985301-622f-436b-81e0-e3aa3077beb4" />
+
 
 ---
 
