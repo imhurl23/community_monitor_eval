@@ -5,7 +5,6 @@ Used by both community_health_cli.py and community_health_mcp.py.
 """
 
 import os
-from concurrent.futures import ThreadPoolExecutor
 import anthropic
 from braintrust import Score
 
@@ -349,31 +348,14 @@ def tag_failure_modes(output: dict, expected: dict, input: dict, **kwargs) -> li
 # All scorers list — pass to Eval(scores=ALL_SCORERS)
 # ---------------------------------------------------------------------------
 
-def llm_judges(output, expected, input, **kwargs):
-    """
-    Combined LLM-judge scorer. Fires the remaining Haiku calls concurrently so
-    they complete in roughly the time of one instead of sequential calls.
-    Returns a list of score dicts; Braintrust unpacks them into separate columns.
-    """
-    _judges = [deescalation_quality, snippet_grounding]
-    with ThreadPoolExecutor(max_workers=len(_judges)) as pool:
-        futures = [pool.submit(fn, output, expected, input, **kwargs) for fn in _judges]
-        results = [f.result() for f in futures]
-    score_objects = [
-        Score(name=result["name"], score=result["score"])
-        for result in results
-        if result is not None
-    ]
-    return score_objects or None
-
-
 ALL_SCORERS = [
     scope_containment,
     report_posted,
     toxicity_label_accuracy,
     false_positive_flag,
     retrieval_completeness,
-    llm_judges,
+    deescalation_quality,
+    snippet_grounding,
     token_efficiency,
     tool_call_efficiency,
     latency_score,
