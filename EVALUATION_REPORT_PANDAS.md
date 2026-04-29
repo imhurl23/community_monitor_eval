@@ -1,4 +1,4 @@
-#  Eval Report — CLI vs MCP for Community Health Triage Agent
+# OSS Community Health First Responder: CLI vs. MCP performance on Pandas discussion threads 
 
 Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` discussion samples. This report compares two implementations of the same GitHub community-health triage workflow: a CLI path built on `gh` and an MCP path built on the GitHub MCP Server running with Anthropic Haiku 4-5    .
 
@@ -7,7 +7,7 @@ Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` d
 | | |
 |---|---|
 | **Project** | `community-health-eval` |
-| **Run cohort** | CLI_final + MCP_final , more |
+| **Run cohort** | CLI_final + MCP_final , more runs are shown in the Braintrust project but do not reflect a stable implementation of the evaluation pipeline |
 | **Runs compared** | 16 fixed final CLI and MCP runs |
 | **Rows observed** | 8,933 (558 average per run) |
 ---
@@ -39,11 +39,12 @@ Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` d
 
 MCP retrieves more completely on average with less variance, suggesting the tool-mediated path is more consistent at pulling available evidence into context.
 
-![Retrieval completeness — mean ± std across fixed CLI and MCP runs](charts/chart_retrieval_completeness.jpg)
+<img width="478" height="238" alt="Screenshot 2026-04-29 at 6 37 09 AM" src="https://github.com/user-attachments/assets/00c65d51-aaf6-408d-bbda-aa16cf90927a" />
+
 
 ### Claim 2 — Scope containment
 
-Both workflows saturate at 1.0. Neither path shows evidence of write attempts or scope-escape behavior in the observed rows.
+Both workflows saturate at 1.0. Neither path shows evidence of innapropriate write attempts or scope-escape behavior in the observed rows.
 
 | | Mean | Std |
 |---|---|---|
@@ -54,17 +55,18 @@ Both workflows saturate at 1.0. Neither path shows evidence of write attempts or
 
 CLI performs materially better on label accuracy, but both pipelines still struggle. MCP's weaker recall (ability to correctly identify more of the tocix content) is the more concerning safety outcome.
 
-![Toxicity label accuracy and confusion matrix — mean ± std across fixed CLI and MCP runs](charts/chart_toxicity_label_accuracy.jpg)
+<img width="473" height="229" alt="Screenshot 2026-04-29 at 6 39 33 AM" src="https://github.com/user-attachments/assets/3236d774-3e25-4161-956b-bdc4c3fd3715" />
+<img width="478" height="231" alt="Screenshot 2026-04-29 at 6 39 02 AM" src="https://github.com/user-attachments/assets/1840e42f-19a8-449f-a30d-cc1afa79d76c" />
 
-MCP achieves perfect precision (never adding a false positive) but misses most of toxic threads. It is possible with further tuning or specific toxicity tooling this could improve but for now this alone indiates... 
+MCP achieves perfect precision (never adding a false positive) but misses most of toxic threads; it only flags the most egregious, unambiguous cases while letting the vast majority of toxic content through undetected. In a content moderation context, this is arguably the worse failure mode: users are still exposed to most of the harm, and the system creates a false sense of safety by appearing to "work" on the cases it does catch. It is possible with further tuning or specific toxicity tooling this could improve but the implementation evaluated here is insufficient. 
 
 ### Claim 4 — De-escalation quality
 
 CLI delivers stronger de-escalation quality despite worse retrieval completeness. More complete retrieval does not automatically improve downstream response quality. CLI's stronger snippet-grounding behavior is the likely explanation.
+<img width="478" height="255" alt="Screenshot 2026-04-29 at 6 40 01 AM" src="https://github.com/user-attachments/assets/f05df5dc-66d8-4a5c-9c0e-173655d7a01b" />
 
-![De-escalation quality — mean ± std across fixed CLI and MCP runs](charts/chart_deescalation_quality.jpg)
 
-This is the clearest sign that retrieval quality and response quality are not interchangeable objectives in this eval design.
+This is a clear sign that retrieval quality and response quality are not interchangeable objectives in this eval design.
 
 ---
 
@@ -85,13 +87,12 @@ This is the clearest sign that retrieval quality and response quality are not in
 
 CLI is **$1.43 cheaper per week** at the current pandas intake.
 
-![Token footprint — mean ± std across fixed CLI and MCP runs](charts/chart_tokens.jpg)
+<img width="1040" height="439" alt="Screenshot 2026-04-29 at 7 17 07 AM" src="https://github.com/user-attachments/assets/073f8be2-922a-4356-b457-3c15991ff6ba" />
 
 ### Claim 2 — Latency and variance
 
 Lower variance shows up in both token usage and latency, making CLI easier to budget and less likely to produce surprise-tail runs.
-
-![Latency — mean ± std across fixed CLI and MCP runs](charts/chart_latency.jpg)
+<img width="1045" height="433" alt="Screenshot 2026-04-29 at 7 16 50 AM" src="https://github.com/user-attachments/assets/25bae825-92ea-4e85-96eb-a27fbeb21709" />
 
 ### Claim 3 — Per-run token distributions
 
@@ -118,15 +119,46 @@ Token distributions show MCP carrying a consistently higher and wider usage band
 
 ---
 
+## H3 — Retrieval interface and failure modes
+
+> Tests whether CLI and MCP induce different retrieval-linked failure patterns and tool-surface overhead.
+
+**Summary:** MCP improves retrieval completeness and uses more tool calls, but completed rows still distribute across scorer-defined failure modes. Explicit runtime errors are a separate execution-risk surface concentrated in MCP.
+
+### Claim 1 — The interface changes the failure mix, not just the retrieval rate
+
+MCP is stronger on retrieval completeness but CLI is stronger on snippet grounding, so better retrieval coverage does not automatically translate into better-grounded moderation outputs. It seems the more comprehensive retrievals + tool overhead may actually limit the ___. 
+
+### Claim 2 — MCP carries higher tool-surface overhead... which was expected 
+
+<img width="478" height="219" alt="Screenshot 2026-04-29 at 7 12 27 AM" src="https://github.com/user-attachments/assets/62014872-5c47-46e4-b1ea-b37b3a92d42f" />
+
+
+**Execution errors by workflow:**
+
+| Workflow | Rows | Explicit errors | Error rate | Frequent error tokens |
+|---|---|---|---|---|
+| CLI | 4,712 across 8 runs | 0 | 0% | — |
+| MCP | 4,221 across 8 runs | 117 | 3% | `sse_client` 117 · `httpx` 57 · `httpcore` 57 |
+
+### Claim 3 — Scorer-defined failure distribution
+
+The `report_posted` gap cannot be cleanly attributed to workflow behavior due to the rate-limit incident.
+
+# NEED PLOT 
+
+Failure priority order: `scope_violation → hallucination → false_negative → false_positive → retrieval_failure → report_not_posted → label_mismatch`
+
+MCP's zero hallucination and zero false positive counts reflect its 100% precision / 15% recall tradeoff : it only flags when very confident, missing most toxic content. Whereas, CLI may not pul the entire context of a conversation and resultingly tag someting as toxic that in the greater conversation does not carry that tone. 
 ## Caveats
 
-**This eval is most useful as a tradeoff study, not a single-score leaderboard.**
+**This eval is most useful as a measure of tradeoffs along the dimensions measured, not a single-score leaderboard. It is a comparison of retrieval interface tradeoffs for a downstream content-quality task, not a universal verdict on MCP vs CLI.**
 
 ### Rate-limit incident
 
 `report_posted` was affected by a GitHub secondary rate limit rather than a clean workflow difference. The failure affected both workflows inconsistently while evaluations were running concurrently. The final two runs should be treated as outliers for direct `report_posted` comparisons.
+<img width="478" height="219" alt="Screenshot 2026-04-29 at 7 13 17 AM" src="https://github.com/user-attachments/assets/5b680753-b0b9-4a9a-8f2e-23c7e30630ab" />
 
-![Report posted — mean ± std across fixed CLI and MCP runs](charts/chart_report_posted.jpg)
 
 ```
 GitHub issue create failed: HTTP 403
@@ -142,33 +174,4 @@ MCP is stronger on retrieval completeness and consistency. CLI is stronger on do
 
 ---
 
-## H3 — Retrieval interface and failure modes
 
-> Tests whether CLI and MCP induce different retrieval-linked failure patterns and tool-surface overhead.
-
-**Summary:** MCP improves retrieval completeness and uses more tool calls, but completed rows still distribute across scorer-defined failure modes. Explicit runtime errors are a separate execution-risk surface concentrated in MCP.
-
-### Claim 1 — The interface changes the failure mix, not just the retrieval rate
-
-MCP is stronger on retrieval completeness but CLI is stronger on snippet grounding, so better retrieval coverage does not automatically translate into better-grounded moderation outputs. It seems the more comprehensive retrievals + tool overhead may actually limit the ___. 
-
-### Claim 2 — MCP carries higher tool-surface overhead
-
-![Tool calls — mean ± std across fixed CLI and MCP runs](charts/chart_tool_calls.jpg)
-
-**Execution errors by workflow:**
-
-| Workflow | Rows | Explicit errors | Error rate | Frequent error tokens |
-|---|---|---|---|---|
-| CLI | 4,712 across 8 runs | 0 | 0% | — |
-| MCP | 4,221 across 8 runs | 117 | 3% | `sse_client` 117 · `httpx` 57 · `httpcore` 57 |
-
-### Claim 3 — Scorer-defined failure distribution
-
-The `report_posted` gap cannot be cleanly attributed to workflow behavior due to the rate-limit incident.
-
-![Failure mode distribution by workflow](charts/chart_failure_modes.jpg)
-
-Failure priority order: `scope_violation → hallucination → false_negative → false_positive → retrieval_failure → report_not_posted → label_mismatch`
-
-MCP's zero hallucination and zero false positive counts reflect its 100% precision / 15% recall tradeoff — it only flags when very confident, missing most toxic content. Whereas, CLI may not pul the entire context of a conversation and resultingly tag someting as toxic that in the greater conversation does not carry that tone. 
