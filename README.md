@@ -466,6 +466,32 @@ The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a dow
 
 ---
 
+## Eval edge cases
+
+These are conditions where the eval produces a passing score but the agent is actually failing  or produces a failing score for something the agent got right. They are limitations of this evaluation. 
+
+### A fabricated snippet can pass `snippet_grounding` if the thread text is long enough
+
+`snippet_grounding` checks whether the quoted snippet appears in `retrieved_thread_text`. That field is the agent's own retrieval output, not the ground truth thread. If the agent retrieves a truncated thread and fabricates a snippet that is plausible but absent from the real thread, it can still pass if the fabricated text happens to match something in what was retrieved. More importantly, `MAX_TOOL_RESULT_CHARS = 8,000` truncates long thread results before they are stored — so for a 40-comment thread, `retrieved_thread_text` may represent only the first half of the actual conversation. A snippet grounded in the stored half passes the check regardless of whether it represents the most toxic content in the full thread. The scorer cannot distinguish "agent found the right thing" from "agent found something that was in the truncated retrieval window."
+
+### Generic de-escalation responses score well on `deescalation_quality`
+
+The LLM-judge prompt asks whether the draft response reduces tension without escalating or assigning blame. A generic, contextually unconnected response — "Thank you for your contribution. Let's keep the discussion constructive and respectful." — will reliably score A (1.0) because it technically satisfies all three criteria. It does not escalate, it does not assign blame, and it nominally addresses tone. The judge is not checking whether the response addresses the *specific* toxic content — only whether the tone is appropriate. An agent could produce boilerplate de-escalation for every flagged thread and score near-perfectly on this dimension while not providing practically helpful de-escalations. 
+
+### `retrieval_completeness` allows one miss but is anchored to the metadata comment count, not the true comment count
+
+The scorer checks whether the agent retrieved at least N–1 comments, where N is `metadata.comment_count`. That field is populated at dataset construction time before the agent runs. If new comments were added to the live GitHub thread between dataset construction and eval execution (though unlikely for the reported set given the dataset curation was within days of the agent runs), the agent may retrieve the current full thread (N+k comments) and still fail `retrieval_completeness` because the scorer expects N–1 and the agent returned more than N. Conversely, the metadata count may be stale in the other direction: a thread that had N comments at construction time may have had comments deleted since, and the agent correctly retrieving N–k would appear to be under the threshold.
+
+### Inline PR review comments are structurally invisible to CLI and partially invisible to MCP
+
+`gh pr view --json comments` does not return inline review comments — only top-level conversation comments. The CLI agent must issue a separate `gh api` call for those, which counts against `MAX_TOOL_CALLS = 6`. If the agent uses its tool budget on other retrieval steps first, it may exhaust the call limit before fetching inline comments. For a PR where the toxic content is an inline review comment (e.g., a condescending remark on a specific code line), the agent can retrieve a complete top-level thread, pass `retrieval_completeness`, and still miss the toxic content entirely — producing a false negative with a passing retrieval score. The MCP normalization layer maps `get_pull_request_review_comments` to the canonical surface. 
+
+### The `clearly_toxic` stratum conflates classifier confidence with ground truth toxicity
+
+A thread enters `clearly_toxic` either because ToxiShield assigned probability ≥ 0.7, or because GitHub maintainers locked it with `active_lock_reason == "too heated"`. Lock-promoted rows may have no single comment that reads as toxic in isolation, the reason the thread was locked may be cumulative tone, off-platform context, or a moderation judgment that doesn't map to the 8-label schema. An agent that correctly returns `is_toxic: false` on such a row is penalized as a false negative, even though the label may reflect a locking decision based on external factors rather than identifiable toxic content in a single comment. The `metadata.classifier_stratum` field distinguishes these cases, but no scorer currently splits performance by promotion source.
+
+---
+
 ## How This Eval Could Be Extended
 
 **PR review quality triage.** Instead of toxicity, the agent identifies low-effort or unconstructive PR reviews ("LGTM" with no substance, drive-by rejection without explanation) and drafts a request for the reviewer to be more specific. The scorer swaps `deescalation_quality` for `review_specificity`. The same CLI vs. MCP retrieval tradeoff applies since PR review retrieval is a distinct surface from PR conversation comments in both workflows.
