@@ -486,7 +486,7 @@ The combination of (1) a read-heavy, multi-step GitHub retrieval task, (2) a dow
 
 [^3]: ["Real-Time Toxicity Filtering for Open-Source Code Reviews"](https://arxiv.org/html/2604.08886v1) — arXiv:2604.08886. Framework comprising toxicity identification, reasoned multiclass classification, and mitigation modules relevant to the 8-label schema.
 
-[^4]: ["The Landscape of Toxicity: An Empirical Investigation of Toxicity on GitHub"](https://www.themoonlight.io/de/review/the-landscape-of-toxicity-an-empirical-investigation-of-toxicity-on-github) — Sarker et al. Source for the `object_directed` label category (hostility directed at artifacts rather than persons).
+[^4]: ["The Landscape of Toxicity: An Empirical Investigation of Toxicity on GitHub"](https://arxiv.org/abs/2502.08238) — Sarker et al. Source for the `object_directed` label category (hostility directed at artifacts rather than persons).
 
 [^5]: ["Analyzing Toxicity in Open Source Software Communications"](https://arxiv.org/html/2412.13133v2) — arXiv:2412.13133. OSS-specific toxicity communication analysis; informs label schema design.
 
