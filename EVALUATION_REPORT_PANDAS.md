@@ -158,9 +158,9 @@ MCP's zero hallucination and near-zero false-positive counts reflect its 100% pr
 
 ### Claim 2 — MCP carries higher tool-surface overhead
 
-MCP uses more tool calls per row, as expected from the richer tool surface. More importantly, MCP is the only workflow that produces explicit runtime errors — and at a non-trivial rate.
+MCP uses more tool calls per row, as expected from the richer tool surface. More importantly, MCP is the only workflow that produces explicit runtime errors — and at a non-trivial rate. However, it is more likely the cli fails more silently. 
 
-All 117 MCP execution errors trace to SSE transport failures (`sse_client`, `httpx`, `httpcore`) rather than logic errors — MCP's server-sent event connection drops under sustained concurrent load. CLI has no equivalent failure surface because it shells out to `gh` commands synchronously. Full error counts appear in Claim 3 below.
+All 117 MCP execution errors trace to SSE transport failures (`sse_client`, `httpx`, `httpcore`) rather than logic errors — MCP's server-sent event connection drops under sustained concurrent load. CLI has no equivalent failure surface because it shells out to `gh` commands synchronously. Full error counts appear below.
 
 <img width="680" alt="Tool calls — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/62014872-5c47-46e4-b1ea-b37b3a92d42f" />
 
@@ -192,60 +192,39 @@ False negative is the largest scorer-defined failure mode for both workflows —
 | MCP | 4,221 across 8 runs | 117 | 3% | `sse_client` 117 · `httpx` 57 · `httpcore` 57 |
 
 All 117 MCP errors are transport failures, not moderation logic failures. They are excluded from the scorer-tagged failure totals above.
-
+ 
+## Failure examples — run 43
+ 
+These cases are drawn from run 43 of each implementation but reflect patterns observed across other runs as well.
+ 
+### CLI — retrieval truncation cascades into wrong diagnosis (PR #63831)
+ 
+CLI's 19,049 total tokens made it the costliest row in the CLI run, and it produced a cascade of failures: token efficiency = 0, retrieval completeness = 0, snippet grounding = 0, wrong severity.
+ 
+The thread had 36 comments. CLI's pagination dropped the final two, including the human-annotated toxic comment at position 32: "I don't have the bandwidth to walk you through this. I need you to figure this out for yourself." (`gatekeeping`, severity high). The model anchored instead on an earlier, syntactically obvious comment: "Closing as stale. can reopen when youre ready to address comments" at position 6, labeling it `dismissive_tone` at medium severity.
+ 
+The failure chain has a single root cause — retrieval drops the tail → model anchors on first salient signal → all downstream scores degrade. It is not three independent errors.
+ 
+### CLI — false positive on policy enforcement (PR #63898)
+ 
+"I suspect this pull request used AI in an irresponsible manner." is a legitimate code-review concern under the pandas `AGENTS.md` policy. CLI labeled it `dismissive_tone` and drafted a de-escalation response; MCP correctly passed this row without flagging. If posted, CLI's draft would have implicitly invalidated a reasonable reviewer concern. Policy-enforcement language framed as suspicion is a category neither model handles well, but CLI's broader detection threshold makes it the one that misfires here.
+ 
+### MCP — high cost on a correctly-classified non-toxic thread (PR #64366)
+ 
+MCP's highest-token row in run 43: 52,316 tokens, $0.0228, on a 35-comment thread where 32 were retrieved and the correct output was "not toxic." The failure mode tagger scored 0.714 — joint-highest in the MCP run. The detection was correct, but MCP spent 5× the CLI per-item mean to reach the same conclusion on a thread that required no action. This is a representative example of MCP's efficiency problem: it issues multiple tool calls regardless of whether the content warrants them, and large non-toxic threads are where that overhead is most visible.
+ 
+### Shared misses — arc-level toxicity evades both workflows (#63444, #63991, #64588)
+ 
+Both CLI and MCP retrieved the relevant comments and still failed to flag these threads. They are not retrieval failures. PR #63444 (`clearly_toxic`, prob = 0.998) involves `gatekeeping` through an implication about contributor bias; PR #63991 (`clearly_toxic`, prob = 0.999) involves `thread_derailment` embedded in a technical dispute; PR #64588 involves `dismissive_tone` expressed as a casual deferral ("Just wait 3 more days I will review, I am little busy!").
+ 
+All three require reading the conversational arc rather than identifying a single flagged passage. The one toxic thread MCP did catch — PR #63446's explicit "why are you so dumb 😊" — is the only case in the sample with unambiguous lexical toxicity. Retrieval improvements will not fix these misses; they require either prompting that explicitly asks for arc-level analysis or a dedicated pre-pass for these subtler categories.
+ 
 ---
-
-## Edge case analysis — CLI run 43 deep dive
-
-Run `cli-final-run-43` (39 rows, pandas-dev/pandas) was selected for detailed case-level analysis to understand where CLI's failure modes cluster. The following cases represent the boundary conditions most likely to inform pipeline improvements.
-
-### False negatives — missed toxic threads
-
-The most alarming pattern: three of the five false negatives came from the `clearly_toxic` stratum — threads where ToxiShield assigned toxicity probability ≥ 0.997. The model was shown the right thread and still failed to detect the problem.
-
-**PR #63991** (`max_toxicity_prob = 0.999`) — *thread derailment, missed entirely*
-The problematic content was a long technical digression that embedded a personal grievance against a maintainer mid-thread. The model correctly identified that the thread was heated but classified the derailment as a legitimate technical disagreement. The `thread_derailment` category requires reading the arc of the full conversation, not a single comment — and CLI's retrieval dropped 3 of 24 comments from the tail of this thread, which happened to include the moment the derailment began.
-
-**PR #63444** (`max_toxicity_prob = 0.998`) — *gatekeeping + thread derailment, missed entirely*
-The toxic content was a reviewer implying a contributor's perspective was biased because they "use pandas more often in notebooks than in production." This is a textbook `gatekeeping` pattern per the CMU OSS toxicity taxonomy, but it contains no flagged lexemes — it reads as a technical observation. Neither ToxiShield nor the model caught the implicit condescension. The expected snippet required reading two separate comments in context to identify the pattern.
-
-**Issue #63444** (`max_toxicity_prob = 0.998`) — *object_directed, missed entirely*
-"I also forget to add what's new not damn! I am little confused because of too much work sorry!" was labeled `object_directed` (frustration directed at the project artifact) by human annotators. The model classified this as a non-toxic contributor expressing stress — a plausible reading in isolation. The distinction between `object_directed` toxicity and ordinary venting is genuinely ambiguous, and this case may reflect a labeling edge case rather than a model failure.
-
-**PR #64588** (`max_toxicity_prob = 0.011`) — *dismissive_tone, missed*
-"@shyamhari1074 Just wait 3 more days I will review, I am little busy!" Human annotators flagged this as `dismissive_tone` — a maintainer's casual deferral that discourages a contributor without engaging their work. The model (and the ToxiShield classifier, given the 0.011 probability) both read this as a polite, reasonable response. This case exposes the limits of the toxicity schema: dismissiveness at this level is highly annotator-dependent.
-
-**PR #63409** (`max_toxicity_prob = 0.001`) — *passive_aggression + gatekeeping, missed*
-A `control_candidate` row (low-activity, constructive by classifier verdict) that human annotators labeled as passive-aggressive gatekeeping. The comment "does this fix a specific issue? Or otherwise can you show an example code snippet that demonstrates the problem?" was read by annotators as condescending toward a first-time contributor. The model agreed with the classifier — this appears non-toxic — and this may be a genuine labeling disagreement rather than a model failure. It does, however, expose the tension between ToxiShield's probability scores and human annotation in the `passive_aggression` category.
-
-### False positive — legitimate concern misread as hostility
-
-**PR #63898** — *AI-use accusation flagged as dismissive_tone*
-"I suspect this pull request used AI in an irresponsible manner." is a substantive code-review concern that has become increasingly common in pandas issues since the project added an `AGENTS.md` policy. The model labeled it `dismissive_tone` and drafted a de-escalation response — which, if posted, would have been inappropriate and confusing to both parties. This case identifies a category of comments the model is not equipped to handle: policy-enforcement language that can read as hostile without being so.
-
-### Snippet grounding failure — anchoring on the wrong comment
-
-**PR #63831** — *wrong snippet, cascading scoring failure*
-This is the single worst-performing row in the run: 19,049 total tokens, $0.0077, token efficiency = 0, retrieval completeness = 0, snippet grounding = 0, wrong severity prediction.
-
-The thread had 36 comments. CLI retrieved 34, dropping the last two (pagination limit). The toxic comment the human annotators identified — "I don't have the bandwidth to walk you through this. I need you to figure this out for yourself." — appeared in comment 32. The model instead anchored on an earlier, more syntactically obvious signal: "Closing as stale. can reopen when youre ready to address comments" (comment 6), labeling it `dismissive_tone` at `medium` severity, while the ground truth was `gatekeeping` at `high` severity.
-
-This case illustrates a failure chain: high comment volume → retrieval drops tail → model anchors on first salient signal → downstream scores all degrade together. It is not three independent failures; it is one retrieval architecture constraint causing a cascade.
-
-### Structural observations from run 43
-
-**Tool call efficiency carries no signal.** Every row in this run used exactly three tool calls (`get_pull_request → get_pull_request_comments → create_issue`), producing a locked `tool_call_efficiency` score of 0.833 for all 39 rows. This scorer cannot differentiate CLI behavior — it would only become useful if the pipeline allowed variable tool routing.
-
-**Borderline stratum is absent.** The `borderline_candidate` stratum (ToxiShield probability 0.4–0.7) produced zero rows in this sample. This is a dataset construction gap, not a model behavior, but it means the false-positive rate measurement in this run is noisy — the hardest cases for precision measurement are simply not present.
-
-**No newcomer-involved rows flagged.** Despite `is_newcomer_involved` being tracked in metadata, zero rows in this run had that flag set. Two of the false negative cases (PRs #63446 and #63409) involved first-time contributors based on thread content, suggesting the newcomer flag in the pipeline may be under-detecting.
-
----
-
 ## Caveats
 
 **This eval is most useful as a measure of tradeoffs along the dimensions measured, not a single-score leaderboard. It compares retrieval interface tradeoffs for a downstream content-quality task — not a universal verdict on MCP vs. CLI.**
 
+**Tool call efficiency carries no signal for current CLI setup.** Every row in this run uses exactly three tool calls (`get_pull_request → get_pull_request_comments → create_issue`), producing a locked `tool_call_efficiency` score of 0.833 for all 39 rows unless there is an error/retry. 
 ### Rate-limit incident
 
 `report_posted` was affected by a GitHub secondary rate limit rather than a clean workflow difference. The failure affected both workflows inconsistently while evaluations were running concurrently. The final two runs should be treated as outliers for direct `report_posted` comparisons.
