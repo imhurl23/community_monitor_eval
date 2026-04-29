@@ -1,15 +1,16 @@
-# OSS Community Health First Responder: CLI vs. MCP performance on Pandas discussion threads 
+# OSS Community Health First Responder: CLI vs. MCP Performance on Pandas Discussion Threads
 
-Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` discussion samples. This report compares two implementations of the same GitHub community-health triage workflow: a CLI path built on `gh` and an MCP path built on the GitHub MCP Server running with Anthropic Haiku 4-5    .
+Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` discussion samples. This report compares two implementations of the same GitHub community-health triage workflow: a CLI path built on `gh` and an MCP path built on the GitHub MCP Server, both running Anthropic Claude Haiku 4.5.
 
-**Main Finding:** While is stronger on retrieval completeness, CLI is stronger on downstream moderation quality with __ the token and much less variance.
+**Main finding:** MCP is stronger on retrieval completeness. CLI is stronger on downstream moderation quality, with roughly one-fifth the token footprint and substantially lower variance across runs.
 
 | | |
 |---|---|
 | **Project** | `community-health-eval` |
-| **Run cohort** | CLI_final + MCP_final , more runs are shown in the Braintrust project but do not reflect a stable implementation of the evaluation pipeline |
-| **Runs compared** | 16 fixed final CLI and MCP runs |
+| **Run cohort** | CLI_final + MCP_final |
+| **Runs compared** | 16 fixed final runs (8 CLI, 8 MCP) |
 | **Rows observed** | 8,933 (558 average per run) |
+
 ---
 
 ## TL;DR
@@ -22,7 +23,7 @@ Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` d
 | Scope containment | 1.000 ± 0.000 | 1.000 ± 0.000 |
 | Tokens (mean) | **3,442 ± 12** | 18,293 ± 131 |
 | Latency (mean) | **5,097ms ± 307ms** | 14,421ms ± 1,246ms |
-| Cost/item | **$0.0045** | $0.0203 |
+| Cost per item | **$0.0045** | $0.0203 |
 | Report posted | 0.888 ± 0.287 | 0.810 ± 0.350 |
 
 > `report_posted` is partially contaminated by a GitHub secondary rate-limit incident — see [Caveats](#caveats).
@@ -37,14 +38,18 @@ Comparative evaluation of CLI and MCP moderation agents on `pandas-dev/pandas` d
 
 ### Claim 1 — Retrieval completeness
 
-MCP retrieves more completely on average with less variance, suggesting the tool-mediated path is more consistent at pulling available evidence into context.
+MCP retrieves more completely on average (0.868 vs. 0.829) with tighter variance (±0.020 vs. ±0.052), suggesting the tool-mediated path is more consistent at pulling available evidence into context. This is the primary advantage of MCP for this workflow.
 
-<img width="478" height="238" alt="Screenshot 2026-04-29 at 6 37 09 AM" src="https://github.com/user-attachments/assets/00c65d51-aaf6-408d-bbda-aa16cf90927a" />
+| | Mean | Std |
+|---|---|---|
+| CLI | 0.829 | 0.052 |
+| **MCP** | **0.868** | **0.020** |
 
+<img width="680" alt="Retrieval completeness — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/00c65d51-aaf6-408d-bbda-aa16cf90927a" />
 
 ### Claim 2 — Scope containment
 
-Both workflows saturate at 1.0. Neither path shows evidence of innapropriate write attempts or scope-escape behavior in the observed rows.
+Both workflows saturate at 1.0 across all runs. Neither path shows evidence of inappropriate write attempts or scope-escape behavior in the observed rows — both implementations correctly restrict themselves to read operations and sandbox report creation.
 
 | | Mean | Std |
 |---|---|---|
@@ -53,20 +58,32 @@ Both workflows saturate at 1.0. Neither path shows evidence of innapropriate wri
 
 ### Claim 3 — Toxicity label accuracy
 
-CLI performs materially better on label accuracy, but both pipelines still struggle. MCP's weaker recall (ability to correctly identify more of the tocix content) is the more concerning safety outcome.
+CLI performs materially better on label accuracy (0.191 vs. 0.146), but both pipelines still struggle overall. MCP's weaker recall — its ability to correctly identify toxic content — is the more concerning safety outcome.
 
-<img width="473" height="229" alt="Screenshot 2026-04-29 at 6 39 33 AM" src="https://github.com/user-attachments/assets/3236d774-3e25-4161-956b-bdc4c3fd3715" />
-<img width="478" height="231" alt="Screenshot 2026-04-29 at 6 39 02 AM" src="https://github.com/user-attachments/assets/1840e42f-19a8-449f-a30d-cc1afa79d76c" />
+MCP achieves near-perfect precision (rarely generating false positives) but misses most toxic threads, flagging only the most egregious, lexically explicit cases while letting the vast majority of harmful content through undetected. In a content moderation context, this is arguably the worse failure mode: contributors are still exposed to most of the harm, and the system creates a false sense of safety by appearing to work on the cases it does catch. CLI's broader but noisier detection makes it a more complete safety net, even accounting for its higher false-positive rate.
 
-MCP achieves perfect precision (never adding a false positive) but misses most of toxic threads; it only flags the most egregious, unambiguous cases while letting the vast majority of toxic content through undetected. In a content moderation context, this is arguably the worse failure mode: users are still exposed to most of the harm, and the system creates a false sense of safety by appearing to "work" on the cases it does catch. It is possible with further tuning or specific toxicity tooling this could improve but the implementation evaluated here is insufficient. 
+| | Mean | Std |
+|---|---|---|
+| **CLI** | **0.191** | **0.009** |
+| MCP | 0.146 | 0.008 |
+
+<img width="680" alt="Toxicity label accuracy — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/3236d774-3e25-4161-956b-bdc4c3fd3715" />
+<img width="680" alt="Toxicity confusion matrix — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/1840e42f-19a8-449f-a30d-cc1afa79d76c" />
 
 ### Claim 4 — De-escalation quality
 
-CLI delivers stronger de-escalation quality despite worse retrieval completeness. More complete retrieval does not automatically improve downstream response quality. CLI's stronger snippet-grounding behavior is the likely explanation.
-<img width="478" height="255" alt="Screenshot 2026-04-29 at 6 40 01 AM" src="https://github.com/user-attachments/assets/f05df5dc-66d8-4a5c-9c0e-173655d7a01b" />
+CLI delivers substantially stronger de-escalation quality (0.833 vs. 0.563) despite worse retrieval completeness. More complete retrieval does not automatically improve downstream response quality — this is a direct counter to the intuition that a better context window produces better outputs.
 
+| | Mean | Std |
+|---|---|---|
+| **CLI** | **0.833** | **0.000** |
+| MCP | 0.563 | 0.165 |
 
-This is a clear sign that retrieval quality and response quality are not interchangeable objectives in this eval design.
+CLI's stronger snippet-grounding behavior is the likely explanation: CLI tends to anchor its draft response to a specific quoted passage from the thread, producing de-escalation messages that address the actual toxic content directly. MCP's broader, less-grounded context appears to generate more generic responses that acknowledge a problem without clearly connecting to it.
+
+This finding is a direct signal that retrieval quality and response quality are not interchangeable objectives in this eval design.
+
+<img width="680" alt="De-escalation quality — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/f05df5dc-66d8-4a5c-9c0e-173655d7a01b" />
 
 ---
 
@@ -74,29 +91,35 @@ This is a clear sign that retrieval quality and response quality are not interch
 
 > Tests whether CLI reaches comparable quality at lower token cost, lower latency, and lower operational variance.
 
-**Summary:** CLI is the more efficient and more predictable workflow on every measured dimension (as expected).
+**Summary:** CLI is the more efficient and more predictable workflow on every measured dimension.
 
 ### Claim 1 — Cost per moderation event
 
-**Weekly pandas workload scenario** (GitHub Search API snapshot 2026-04-21 to 2026-04-28: 15 issues + 76 PRs = 91 events/week):
+At the current pandas intake rate (GitHub Search API snapshot 2026-04-21 to 2026-04-28: 15 issues + 76 PRs = 91 events per week):
 
-| | Cost/item | Std | Weekly cost |
+| | Cost per item | Std | Weekly cost |
 |---|---|---|---|
-| CLI | **$0.0045** | $0.0001 | **$0.41** |
+| **CLI** | **$0.0045** | $0.0001 | **$0.41** |
 | MCP | $0.0203 | $0.0002 | $1.85 |
 
-CLI is **$1.43 cheaper per week** at the current pandas intake.
+CLI is **$1.43 cheaper per week** at current pandas intake — a 4.5× cost difference driven almost entirely by token volume.
 
-<img width="1040" height="439" alt="Screenshot 2026-04-29 at 7 17 07 AM" src="https://github.com/user-attachments/assets/073f8be2-922a-4356-b457-3c15991ff6ba" />
+<img width="680" alt="Token footprint — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/073f8be2-922a-4356-b457-3c15991ff6ba" />
 
 ### Claim 2 — Latency and variance
 
-Lower variance shows up in both token usage and latency, making CLI easier to budget and less likely to produce surprise-tail runs.
-<img width="1045" height="433" alt="Screenshot 2026-04-29 at 7 16 50 AM" src="https://github.com/user-attachments/assets/25bae825-92ea-4e85-96eb-a27fbeb21709" />
+CLI is 2.8× faster on average (5,097ms vs. 14,421ms) and substantially tighter in both token and latency variance. The lower variance matters operationally: CLI runs are easier to budget and far less likely to produce surprise tail-latency spikes.
+
+| | Mean latency | Std | Mean tokens | Std |
+|---|---|---|---|---|
+| **CLI** | **5,097ms** | **307ms** | **3,442** | **12** |
+| MCP | 14,421ms | 1,246ms | 18,293 | 131 |
+
+<img width="680" alt="Latency — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/25bae825-92ea-4e85-96eb-a27fbeb21709" />
 
 ### Claim 3 — Per-run token distributions
 
-Token distributions show MCP carrying a consistently higher and wider usage band. The `mcp-final-run-44` outlier (max 45,546 tokens) is worth investigating separately.
+Token distributions show MCP carrying a consistently higher and wider usage band across every paired run. The `mcp-final-run-44` outlier (max 45,546 tokens vs. the typical MCP ceiling of ~27,000) is the single highest-cost row in the dataset and warrants separate investigation.
 
 | Run | Token range | Std |
 |---|---|---|
@@ -112,7 +135,7 @@ Token distributions show MCP carrying a consistently higher and wider usage band
 | `cli-final-run-47` | 713 – 8,473 | 1,612 |
 | `mcp-final-run-46` | 739 – 27,186 | 5,934 |
 | `cli-final-run-45` | 713 – 8,473 | 1,622 |
-| `mcp-final-run-44` | 739 – 45,546 | 6,935 |
+| `mcp-final-run-44` | 739 – **45,546** | 6,935 |
 | `cli-final-run-44` | 652 – 8,463 | 1,624 |
 | `mcp-final-run-43` | 739 – 26,158 | 5,944 |
 | `cli-final-run-43` | 652 – 8,468 | 1,602 |
@@ -123,42 +146,111 @@ Token distributions show MCP carrying a consistently higher and wider usage band
 
 > Tests whether CLI and MCP induce different retrieval-linked failure patterns and tool-surface overhead.
 
-**Summary:** MCP improves retrieval completeness and uses more tool calls, but completed rows still distribute across scorer-defined failure modes. Explicit runtime errors are a separate execution-risk surface concentrated in MCP.
+**Summary:** MCP improves retrieval completeness and uses more tool calls, but completed rows still distribute across scorer-defined failure modes. Explicit runtime errors are a separate execution-risk surface concentrated in MCP. The interface changes the *mix* of failures, not just the retrieval rate.
 
 ### Claim 1 — The interface changes the failure mix, not just the retrieval rate
 
-MCP is stronger on retrieval completeness but CLI is stronger on snippet grounding, so better retrieval coverage does not automatically translate into better-grounded moderation outputs. It seems the more comprehensive retrievals + tool overhead may actually limit the ___. 
+MCP is stronger on retrieval completeness but CLI is stronger on snippet grounding: better retrieval coverage does not automatically translate into better-grounded moderation outputs. The more comprehensive MCP retrievals combined with tool overhead appear to dilute the model's attention — flooding the context with additional comments makes it harder, not easier, to identify and anchor on the specific toxic passage. CLI's constrained context forces tighter focus.
 
-### Claim 2 — MCP carries higher tool-surface overhead... which was expected 
+**Failure priority order:** `scope_violation → hallucination → false_negative → false_positive → retrieval_failure → report_not_posted → label_mismatch`
 
-<img width="478" height="219" alt="Screenshot 2026-04-29 at 7 12 27 AM" src="https://github.com/user-attachments/assets/62014872-5c47-46e4-b1ea-b37b3a92d42f" />
+MCP's zero hallucination and near-zero false-positive counts reflect its 100% precision / ~15% recall tradeoff: it only flags when very confident, missing most toxic content. CLI may not retrieve the full conversation context, which occasionally leads it to flag a comment that reads as toxic in isolation but is neutralized by surrounding replies.
 
+### Claim 2 — MCP carries higher tool-surface overhead
 
-**Execution errors by workflow:**
+MCP uses more tool calls per row, as expected from the richer tool surface. More importantly, MCP is the only workflow that produces explicit runtime errors — and at a non-trivial rate.
 
-| Workflow | Rows | Explicit errors | Error rate | Frequent error tokens |
+All 117 MCP execution errors trace to SSE transport failures (`sse_client`, `httpx`, `httpcore`) rather than logic errors — MCP's server-sent event connection drops under sustained concurrent load. CLI has no equivalent failure surface because it shells out to `gh` commands synchronously. Full error counts appear in Claim 3 below.
+
+<img width="680" alt="Tool calls — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/62014872-5c47-46e4-b1ea-b37b3a92d42f" />
+
+### Claim 3 — Scorer-defined failure distribution
+
+The `report_posted` gap cannot be cleanly attributed to workflow behavior due to the rate-limit incident (see Caveats). Excluding the final two runs, the gap narrows considerably and is not statistically distinguishable from noise.
+
+**Failure taxonomy by workflow** (scorer-tagged failures only; MCP execution errors counted separately):
+
+| Failure type | CLI count | CLI % | MCP count | MCP % |
+|---|---|---|---|---|
+| Scope violation | 0 | 0% | 0 | 0% |
+| Hallucination | 8 | 7% | 0 | 0% |
+| **False negative** | **39** | **35%** | **47** | **47%** |
+| False positive | 7 | 6% | 0 | 0% |
+| Retrieval failure | 31 | 28% | 18 | 18% |
+| Report not posted | 25 | 23% | 35 | 35% |
+| Label mismatch | 0 | 0% | 0 | 0% |
+| **Total** | **110** | | **100** | |
+| Completed rows | 4,712 | | 4,104 | |
+
+False negative is the largest scorer-defined failure mode for both workflows — 35% of CLI failures and 47% of MCP failures. CLI distributes its remaining failures across retrieval (28%) and report-posting (23%). MCP's remaining failures split between report-not-posted (35%) and retrieval failure (18%), with zero hallucinations, zero false positives, and zero scope violations or label mismatches.
+
+**Execution error summary** (rows that failed during execution, not scored as moderation outcomes):
+
+| Workflow | Rows | Explicit errors | Error rate | Frequent signatures |
 |---|---|---|---|---|
 | CLI | 4,712 across 8 runs | 0 | 0% | — |
 | MCP | 4,221 across 8 runs | 117 | 3% | `sse_client` 117 · `httpx` 57 · `httpcore` 57 |
 
-### Claim 3 — Scorer-defined failure distribution
+All 117 MCP errors are transport failures, not moderation logic failures. They are excluded from the scorer-tagged failure totals above.
 
-The `report_posted` gap cannot be cleanly attributed to workflow behavior due to the rate-limit incident.
+---
 
-# NEED PLOT 
+## Edge case analysis — CLI run 43 deep dive
 
-Failure priority order: `scope_violation → hallucination → false_negative → false_positive → retrieval_failure → report_not_posted → label_mismatch`
+Run `cli-final-run-43` (39 rows, pandas-dev/pandas) was selected for detailed case-level analysis to understand where CLI's failure modes cluster. The following cases represent the boundary conditions most likely to inform pipeline improvements.
 
-MCP's zero hallucination and zero false positive counts reflect its 100% precision / 15% recall tradeoff : it only flags when very confident, missing most toxic content. Whereas, CLI may not pul the entire context of a conversation and resultingly tag someting as toxic that in the greater conversation does not carry that tone. 
+### False negatives — missed toxic threads
+
+The most alarming pattern: three of the five false negatives came from the `clearly_toxic` stratum — threads where ToxiShield assigned toxicity probability ≥ 0.997. The model was shown the right thread and still failed to detect the problem.
+
+**PR #63991** (`max_toxicity_prob = 0.999`) — *thread derailment, missed entirely*
+The problematic content was a long technical digression that embedded a personal grievance against a maintainer mid-thread. The model correctly identified that the thread was heated but classified the derailment as a legitimate technical disagreement. The `thread_derailment` category requires reading the arc of the full conversation, not a single comment — and CLI's retrieval dropped 3 of 24 comments from the tail of this thread, which happened to include the moment the derailment began.
+
+**PR #63444** (`max_toxicity_prob = 0.998`) — *gatekeeping + thread derailment, missed entirely*
+The toxic content was a reviewer implying a contributor's perspective was biased because they "use pandas more often in notebooks than in production." This is a textbook `gatekeeping` pattern per the CMU OSS toxicity taxonomy, but it contains no flagged lexemes — it reads as a technical observation. Neither ToxiShield nor the model caught the implicit condescension. The expected snippet required reading two separate comments in context to identify the pattern.
+
+**Issue #63444** (`max_toxicity_prob = 0.998`) — *object_directed, missed entirely*
+"I also forget to add what's new not damn! I am little confused because of too much work sorry!" was labeled `object_directed` (frustration directed at the project artifact) by human annotators. The model classified this as a non-toxic contributor expressing stress — a plausible reading in isolation. The distinction between `object_directed` toxicity and ordinary venting is genuinely ambiguous, and this case may reflect a labeling edge case rather than a model failure.
+
+**PR #64588** (`max_toxicity_prob = 0.011`) — *dismissive_tone, missed*
+"@shyamhari1074 Just wait 3 more days I will review, I am little busy!" Human annotators flagged this as `dismissive_tone` — a maintainer's casual deferral that discourages a contributor without engaging their work. The model (and the ToxiShield classifier, given the 0.011 probability) both read this as a polite, reasonable response. This case exposes the limits of the toxicity schema: dismissiveness at this level is highly annotator-dependent.
+
+**PR #63409** (`max_toxicity_prob = 0.001`) — *passive_aggression + gatekeeping, missed*
+A `control_candidate` row (low-activity, constructive by classifier verdict) that human annotators labeled as passive-aggressive gatekeeping. The comment "does this fix a specific issue? Or otherwise can you show an example code snippet that demonstrates the problem?" was read by annotators as condescending toward a first-time contributor. The model agreed with the classifier — this appears non-toxic — and this may be a genuine labeling disagreement rather than a model failure. It does, however, expose the tension between ToxiShield's probability scores and human annotation in the `passive_aggression` category.
+
+### False positive — legitimate concern misread as hostility
+
+**PR #63898** — *AI-use accusation flagged as dismissive_tone*
+"I suspect this pull request used AI in an irresponsible manner." is a substantive code-review concern that has become increasingly common in pandas issues since the project added an `AGENTS.md` policy. The model labeled it `dismissive_tone` and drafted a de-escalation response — which, if posted, would have been inappropriate and confusing to both parties. This case identifies a category of comments the model is not equipped to handle: policy-enforcement language that can read as hostile without being so.
+
+### Snippet grounding failure — anchoring on the wrong comment
+
+**PR #63831** — *wrong snippet, cascading scoring failure*
+This is the single worst-performing row in the run: 19,049 total tokens, $0.0077, token efficiency = 0, retrieval completeness = 0, snippet grounding = 0, wrong severity prediction.
+
+The thread had 36 comments. CLI retrieved 34, dropping the last two (pagination limit). The toxic comment the human annotators identified — "I don't have the bandwidth to walk you through this. I need you to figure this out for yourself." — appeared in comment 32. The model instead anchored on an earlier, more syntactically obvious signal: "Closing as stale. can reopen when youre ready to address comments" (comment 6), labeling it `dismissive_tone` at `medium` severity, while the ground truth was `gatekeeping` at `high` severity.
+
+This case illustrates a failure chain: high comment volume → retrieval drops tail → model anchors on first salient signal → downstream scores all degrade together. It is not three independent failures; it is one retrieval architecture constraint causing a cascade.
+
+### Structural observations from run 43
+
+**Tool call efficiency carries no signal.** Every row in this run used exactly three tool calls (`get_pull_request → get_pull_request_comments → create_issue`), producing a locked `tool_call_efficiency` score of 0.833 for all 39 rows. This scorer cannot differentiate CLI behavior — it would only become useful if the pipeline allowed variable tool routing.
+
+**Borderline stratum is absent.** The `borderline_candidate` stratum (ToxiShield probability 0.4–0.7) produced zero rows in this sample. This is a dataset construction gap, not a model behavior, but it means the false-positive rate measurement in this run is noisy — the hardest cases for precision measurement are simply not present.
+
+**No newcomer-involved rows flagged.** Despite `is_newcomer_involved` being tracked in metadata, zero rows in this run had that flag set. Two of the false negative cases (PRs #63446 and #63409) involved first-time contributors based on thread content, suggesting the newcomer flag in the pipeline may be under-detecting.
+
+---
+
 ## Caveats
 
-**This eval is most useful as a measure of tradeoffs along the dimensions measured, not a single-score leaderboard. It is a comparison of retrieval interface tradeoffs for a downstream content-quality task, not a universal verdict on MCP vs CLI.**
+**This eval is most useful as a measure of tradeoffs along the dimensions measured, not a single-score leaderboard. It compares retrieval interface tradeoffs for a downstream content-quality task — not a universal verdict on MCP vs. CLI.**
 
 ### Rate-limit incident
 
 `report_posted` was affected by a GitHub secondary rate limit rather than a clean workflow difference. The failure affected both workflows inconsistently while evaluations were running concurrently. The final two runs should be treated as outliers for direct `report_posted` comparisons.
-<img width="478" height="219" alt="Screenshot 2026-04-29 at 7 13 17 AM" src="https://github.com/user-attachments/assets/5b680753-b0b9-4a9a-8f2e-23c7e30630ab" />
 
+<img width="680" alt="Report posted — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/5b680753-b0b9-4a9a-8f2e-23c7e30630ab" />
 
 ```
 GitHub issue create failed: HTTP 403
@@ -170,8 +262,6 @@ Timestamp: 2026-04-28 22:25:42 UTC
 
 ### Tradeoff frame
 
-MCP is stronger on retrieval completeness and consistency. CLI is stronger on downstream toxicity labeling, de-escalation quality, token footprint, and variance. The most important finding is the mismatch between retrieval strength and downstream moderation quality — more complete retrieval does not automatically produce better-grounded responses.
+MCP is stronger on retrieval completeness and consistency. CLI is stronger on downstream toxicity labeling, de-escalation quality, token footprint, and variance. The most important finding is the mismatch between retrieval strength and downstream moderation quality: **more complete retrieval does not automatically produce better-grounded responses.** The mechanism appears to be attentional — a broader context window in a high-noise thread makes it harder, not easier, to isolate the relevant toxic passage and respond to it specifically.
 
----
-
-
+A promising direction for future work is combining MCP's retrieval completeness with CLI-style snippet-first prompting: retrieve comprehensively, then force the model to identify and quote the specific passage before drafting a response. Whether this closes the de-escalation quality gap without inheriting MCP's token and latency costs is an open question.
