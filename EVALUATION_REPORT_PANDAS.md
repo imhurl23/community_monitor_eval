@@ -58,7 +58,7 @@ Both workflows saturate at 1.0 across all runs. Neither path shows evidence of i
 
 ### Claim 3 — Toxicity label accuracy
 
-CLI performs materially better on label accuracy (0.191 vs. 0.146), but both pipelines still struggle overall. MCP's weaker recall — its ability to correctly identify toxic content — is the more concerning safety outcome.
+CLI performs materially better on label accuracy (0.191 vs. 0.146), but both pipelines still struggle overall. MCP's weaker recall (its ability to correctly identify toxic content) is the more concerning safety outcome.
 
 MCP achieves near-perfect precision (rarely generating false positives) but misses most toxic threads, flagging only the most egregious, lexically explicit cases while letting the vast majority of harmful content through undetected. In a content moderation context, this is arguably the worse failure mode: contributors are still exposed to most of the harm, and the system creates a false sense of safety by appearing to work on the cases it does catch. CLI's broader but noisier detection makes it a more complete safety net, even accounting for its higher false-positive rate.
 
@@ -81,9 +81,13 @@ CLI delivers substantially stronger de-escalation quality (0.833 vs. 0.563) desp
 
 CLI's stronger snippet-grounding behavior is the likely explanation: CLI tends to anchor its draft response to a specific quoted passage from the thread, producing de-escalation messages that address the actual toxic content directly. MCP's broader, less-grounded context appears to generate more generic responses that acknowledge a problem without clearly connecting to it.
 
+<img width="553" height="269" alt="Screenshot 2026-04-29 at 8 45 29 AM" src="https://github.com/user-attachments/assets/51b2a278-a343-4a3c-9c63-0166f377f276" />
+
 This finding is a direct signal that retrieval quality and response quality are not interchangeable objectives in this eval design.
 
 <img width="680" alt="De-escalation quality — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/f05df5dc-66d8-4a5c-9c0e-173655d7a01b" />
+
+
 
 ---
 
@@ -150,7 +154,7 @@ Token distributions show MCP carrying a consistently higher and wider usage band
 
 ### Claim 1 — The interface changes the failure mix, not just the retrieval rate
 
-MCP is stronger on retrieval completeness but CLI is stronger on snippet grounding: better retrieval coverage does not automatically translate into better-grounded moderation outputs. The more comprehensive MCP retrievals combined with tool overhead appear to dilute the model's attention — flooding the context with additional comments makes it harder, not easier, to identify and anchor on the specific toxic passage. CLI's constrained context forces tighter focus.
+MCP is stronger on retrieval completeness but CLI is stronger on snippet grounding: better retrieval coverage does not automatically translate into better-grounded moderation outputs. The more comprehensive MCP retrievals combined with tool overhead appear to dilute the model's attention; flooding the context with additional comments makes it harder, not easier, to identify and anchor on the specific toxic passage. CLI's constrained context forces tighter focus.
 
 **Failure priority order:** `scope_violation → hallucination → false_negative → false_positive → retrieval_failure → report_not_posted → label_mismatch`
 
@@ -158,9 +162,9 @@ MCP's zero hallucination and near-zero false-positive counts reflect its 100% pr
 
 ### Claim 2 — MCP carries higher tool-surface overhead
 
-MCP uses more tool calls per row, as expected from the richer tool surface. More importantly, MCP is the only workflow that produces explicit runtime errors — and at a non-trivial rate. However, it is more likely the cli fails more silently. 
+MCP uses more tool calls per row, as expected from the richer tool surface. More importantly, MCP is the only workflow that produces explicit runtime errors, and at a non-trivial rate. However, it is likely the cli fails more silently. 
 
-All 117 MCP execution errors trace to SSE transport failures (`sse_client`, `httpx`, `httpcore`) rather than logic errors — MCP's server-sent event connection drops under sustained concurrent load. CLI has no equivalent failure surface because it shells out to `gh` commands synchronously. Full error counts appear below.
+All 117 MCP execution errors trace to SSE transport failures (`sse_client`, `httpx`, `httpcore`) rather than logic errors. MCP's server-sent event connection drops under sustained concurrent load. CLI has no equivalent failure surface because it shells out to `gh` commands synchronously. Full error counts appear below.
 
 <img width="680" alt="Tool calls — mean ± std across fixed CLI and MCP runs" src="https://github.com/user-attachments/assets/62014872-5c47-46e4-b1ea-b37b3a92d42f" />
 
@@ -203,7 +207,7 @@ CLI's 19,049 total tokens made it the costliest row in the CLI run, and it produ
  
 The thread had 36 comments. CLI's pagination dropped the final two, including the human-annotated toxic comment at position 32: "I don't have the bandwidth to walk you through this. I need you to figure this out for yourself." (`gatekeeping`, severity high). The model anchored instead on an earlier, syntactically obvious comment: "Closing as stale. can reopen when youre ready to address comments" at position 6, labeling it `dismissive_tone` at medium severity.
  
-The failure chain has a single root cause — retrieval drops the tail → model anchors on first salient signal → all downstream scores degrade. It is not three independent errors.
+The failure chain has a single root cause. Retrieval drops the tail → model anchors on first salient signal → all downstream scores degrade. It is not three independent errors.
  
 ### CLI — false positive on policy enforcement (PR #63898)
  
@@ -211,18 +215,18 @@ The failure chain has a single root cause — retrieval drops the tail → model
  
 ### MCP — high cost on a correctly-classified non-toxic thread (PR #64366)
  
-MCP's highest-token row in run 43: 52,316 tokens, $0.0228, on a 35-comment thread where 32 were retrieved and the correct output was "not toxic." The failure mode tagger scored 0.714 — joint-highest in the MCP run. The detection was correct, but MCP spent 5× the CLI per-item mean to reach the same conclusion on a thread that required no action. This is a representative example of MCP's efficiency problem: it issues multiple tool calls regardless of whether the content warrants them, and large non-toxic threads are where that overhead is most visible.
+MCP's highest-token row in run 43: 52,316 tokens, $0.0228, on a 35-comment thread where 32 were retrieved and the correct output was "not toxic." The detection was correct, but MCP spent 5× the CLI per-item mean to reach the same conclusion on a thread that required no action. This is a representative example of MCP's efficiency problem: it issues multiple tool calls regardless of whether the content warrants them, and large non-toxic threads are where that overhead is most visible.
  
 ### Shared misses — arc-level toxicity evades both workflows (#63444, #63991, #64588)
  
 Both CLI and MCP retrieved the relevant comments and still failed to flag these threads. They are not retrieval failures. PR #63444 (`clearly_toxic`, prob = 0.998) involves `gatekeeping` through an implication about contributor bias; PR #63991 (`clearly_toxic`, prob = 0.999) involves `thread_derailment` embedded in a technical dispute; PR #64588 involves `dismissive_tone` expressed as a casual deferral ("Just wait 3 more days I will review, I am little busy!").
  
-All three require reading the conversational arc rather than identifying a single flagged passage. The one toxic thread MCP did catch — PR #63446's explicit "why are you so dumb 😊" — is the only case in the sample with unambiguous lexical toxicity. Retrieval improvements will not fix these misses; they require either prompting that explicitly asks for arc-level analysis or a dedicated pre-pass for these subtler categories.
+All three require reading the conversational arc rather than identifying a single flagged passage. The one toxic thread MCP did catch PR #63446's explicit "why are you so dumb 😊" is the only case in the sample with unambiguous lexical toxicity. Retrieval improvements will not fix these misses; they require either prompting that explicitly asks for arc-level analysis or a dedicated pre-pass for these subtler categories.
  
 ---
 ## Caveats
 
-**This eval is most useful as a measure of tradeoffs along the dimensions measured, not a single-score leaderboard. It compares retrieval interface tradeoffs for a downstream content-quality task — not a universal verdict on MCP vs. CLI.**
+**This eval is most useful as a measure of tradeoffs along the dimensions measured, not a single-score leaderboard. It compares retrieval interface tradeoffs for a downstream content-quality task, not a universal verdict on MCP vs. CLI.**
 
 **Tool call efficiency carries no signal for current CLI setup.** Every row in this run uses exactly three tool calls (`get_pull_request → get_pull_request_comments → create_issue`), producing a locked `tool_call_efficiency` score of 0.833 for all 39 rows unless there is an error/retry. 
 ### Rate-limit incident
@@ -241,6 +245,6 @@ Timestamp: 2026-04-28 22:25:42 UTC
 
 ### Tradeoff frame
 
-MCP is stronger on retrieval completeness and consistency. CLI is stronger on downstream toxicity labeling, de-escalation quality, token footprint, and variance. The most important finding is the mismatch between retrieval strength and downstream moderation quality: **more complete retrieval does not automatically produce better-grounded responses.** The mechanism appears to be attentional — a broader context window in a high-noise thread makes it harder, not easier, to isolate the relevant toxic passage and respond to it specifically.
+MCP is stronger on retrieval completeness and consistency. CLI is stronger on downstream toxicity labeling, de-escalation quality, token footprint, and variance. The most important finding is the mismatch between retrieval strength and downstream moderation quality: **more complete retrieval does not automatically produce better-grounded responses.** The mechanism may be attentional: a broader context window in a high-noise thread makes it harder, not easier, to isolate the relevant toxic passage and respond to it specifically.
 
 A promising direction for future work is combining MCP's retrieval completeness with CLI-style snippet-first prompting: retrieve comprehensively, then force the model to identify and quote the specific passage before drafting a response. Whether this closes the de-escalation quality gap without inheriting MCP's token and latency costs is an open question.
