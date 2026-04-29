@@ -381,9 +381,9 @@ Three normalized telemetry scorers make the CLI vs. MCP tradeoff easier to compa
 
 ---
 
-## Failure Taxonomy #TODO figure out what is going on here
+## Failure Taxonomy
 
-The scorer code defines the following failure taxonomy and collapses each row to a single primary failure mode via `failure_mode_tagger`. The numeric primary-mode score is what is stored in Braintrust.
+The scorer code defines the following failure taxonomy and collapses each row to a single primary failure mode via `failure_mode_tagger`. The numeric primary-mode score is what is stored.
 
 | Tag | Definition | Likely cause |
 |---|---|---|
