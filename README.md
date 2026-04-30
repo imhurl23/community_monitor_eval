@@ -64,6 +64,8 @@ A dataset consists of N discussion items (a mix of issues and PRs from the sourc
 
 `clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
 
+**Why the pandas dataset settled at N = 39, not the full 4 × 20 pool.** The sampling cap is 20 per stratum, which would yield up to 80 rows. Three strata came in under cap on `pandas-dev/pandas`: `clearly_toxic_candidate` supplied only 5 rows (the classifier found few high-confidence examples because pandas maintainers moderate aggressively), `heated_not_toxic_candidate` supplied 14, and `borderline_candidate` supplied 0. The `control_candidate` stratum filled its full 20 — mostly PRs with 0–1 comments that produce identical "not toxic / nothing to do" outputs. That repetitiveness is a known limitation: the control rows add sanity-check coverage but contribute no meaningful diversity to the eval. Final composition: `control` (20) + `heated_not_toxic` (14) + `clearly_toxic` (5) + `borderline` (0) = 39.
+
 **Phase 2 — Ground truth annotation.** For each sampled item, an annotator produces:
 
 - A binary toxicity judgment (`is_toxic: true / false`)
