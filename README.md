@@ -57,10 +57,10 @@ A dataset consists of N discussion items (a mix of issues and PRs from the sourc
 
 | Stratum | Default cap per repo | Sampling criterion |
 |---|---|---|
-| `clearly_toxic_candidate` | 10 | At least one comment with ToxiShield prob ≥ 0.7, OR GitHub maintainers locked the thread with `active_lock_reason == "too heated"` |
-| `borderline_candidate` | 10 | At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone |
-| `heated_not_toxic_candidate` | 10 | ≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language |
-| `control_candidate` | 10 | ≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads |
+| `clearly_toxic_candidate` | 20 | At least one comment with ToxiShield prob ≥ 0.7, OR GitHub maintainers locked the thread with `active_lock_reason == "too heated"` |
+| `borderline_candidate` | 20 | At least one comment with prob ≥ 0.4 AND max prob < 0.7 — the ambiguity zone |
+| `heated_not_toxic_candidate` | 20 | ≥ 15 comments AND max prob < 0.4 — high engagement, no toxic language |
+| `control_candidate` | 20 | ≤ 5 comments AND max prob < 0.2 — low-activity, constructive threads |
 
 `clearly_toxic_candidate` is fed by two independent signals: ToxiShield catches lexically explicit toxicity, while GitHub's `too heated` lock reason catches threads the classifier missed (≈71% precision in pilot review). The original classifier verdict is preserved on `metadata.classifier_stratum` so post-annotation analysis can compare the two signals.
 
