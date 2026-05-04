@@ -37,7 +37,7 @@ The following eight categories are drawn from the OSS-specific research literatu
 | `hostile_aggression` | Explicit threats, insults, name-calling | Rare in code review; more common in issues with blocked PRs |
 | `entitlement` | Demanding tone, "fix this NOW", "why hasn't this been done" | Most distinctive OSS category; often missed by general detectors[^2] |
 | `dismissive_tone` | Closing without engagement, "not my problem", curt rejection | Discourages newcomers even when technically polite |
-| `sarcasm_belittling` | Ironic minimization, mocking effort or skill | Hard to auto-detect; high false-negative rate in LSTM models[^8] |
+| `sarcasm_belittling` | Ironic minimization, mocking effort or skill | Hard to auto-detect |
 | `passive_aggression` | Technically civil but subtly hostile framing | Contextually rich; CMU study flags as most "OSS-specific" pattern[^2] |
 | `gatekeeping` | Condescension toward perceived skill level, "have you even read the docs?" | Particularly discouraging for first-time contributors |
 | `thread_derailment` | Off-topic escalation, personal attacks displacing technical discussion | Often involves prior relationship context |
