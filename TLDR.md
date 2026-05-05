@@ -132,7 +132,7 @@ CLI distributes failures across retrieval (28%) and report-not-posted (23%) beyo
  
 **Independent judge model.** Swap Haiku out as the LLM-judge scorer and use a model not present anywhere else in the pipeline to eliminate circularity bias.
 
-**Alter Strata.** Strata lead to undersampling on borderline, and heated strata. The numerical ToxiShield values should be tuned based on labeler experience. 
+**Alter Strata.** Strata lead to undersampling of actual toxic-content within the borderline, and heated strata. The numerical ToxiShield values should be tuned based on labeler experience or a secondary classifier model. 
  
 **Snippet-first prompting on MCP.** Retrieve comprehensively (MCP), then force the model to identify and quote the specific passage before drafting. Tests whether CLI's grounding advantage is prompt-recoverable.
  
